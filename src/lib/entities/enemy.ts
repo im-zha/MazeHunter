@@ -124,14 +124,19 @@ export function updateEnemy(
   updated = { ...updated, stepTimer: updated.stepTimer + deltaMs };
 
   // Move along path if timer reached
-  if (updated.stepTimer >= updated.stepInterval && updated.pathCache.length > 0) {
-    const nextPos = updated.pathCache[0];
-    updated = {
-      ...updated,
-      pos: nextPos,
-      pathCache: updated.pathCache.slice(1),
-      stepTimer: 0,
-    };
+  if (updated.stepTimer >= updated.stepInterval) {
+    if (updated.pathCache.length > 0) {
+      const nextPos = updated.pathCache[0];
+      updated = {
+        ...updated,
+        pos: nextPos,
+        pathCache: updated.pathCache.slice(1),
+        stepTimer: 0,
+      };
+    } else {
+      // Pathfinding failed or is fully blocked, gracefully reset the move timer
+      updated = { ...updated, stepTimer: 0 };
+    }
   }
 
   return updated;
