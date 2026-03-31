@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+/* ── Global Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  background: #0d0d1f;
+  color: #ffffff;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── CSS Custom Properties ── */
+:root {
+  --color-bg:        #0d0d1f;
+  --color-surface:   #1a1a2e;
+  --color-border:    rgba(255, 255, 255, 0.08);
+  --color-primary:   #7b2ff7;
+  --color-secondary: #f72585;
+  --color-accent:    #39ff14;
+  --color-exit:      #00ff87;
+  --color-crystal:   #f72585;
+  --color-text:      #ffffff;
+  --color-muted:     rgba(255, 255, 255, 0.45);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 9999px; }
