@@ -13,7 +13,6 @@ function createInitialGameState(): GameState {
     wave: 1,
     lives: 3,
     timeElapsedMs: 0,
-    debugMode: false,
     player: {
       pos: { row: 1, col: 1 },
       fogRadius: 4,
@@ -21,9 +20,12 @@ function createInitialGameState(): GameState {
       wallBombs: 3,
       isSliding: false,
       slideDir: null,
+      freezeTimer: 0,
     },
     enemies: [],
     grid: [],
+    fogEnabled: DEFAULT_SETTINGS.fogEnabled,
+    debugMode: false,
   };
 }
 
