@@ -2,8 +2,8 @@
 // dijkstra.ts — Dijkstra's Algorithm (weighted shortest path)
 // ============================================================
 
-import { type AlgoResult, type Grid, type Pos } from '../core/types.js';
-import { getNeighbors, posEqual, posToId } from '../core/graph.js';
+import { EnemyTrait, type AlgoResult, type Grid, type LadderObject, type Pos } from '../core/types.js';
+import { getNeighbors, getNeighborsForTrait, posEqual, posToId } from '../core/graph.js';
 
 // --------------- Min-Heap (Binary Heap) ---------------
 
@@ -14,7 +14,6 @@ interface HeapNode {
 
 class MinHeap {
   private heap: HeapNode[] = [];
-
   get size() { return this.heap.length; }
 
   push(node: HeapNode) {
@@ -59,10 +58,16 @@ class MinHeap {
 // --------------- Dijkstra ---------------
 
 /**
- * Dijkstra's shortest path on a weighted grid.
- * Terrain costs: ICE=0.5, FLOOR=1, MUD=3, WALL=Inf.
+ * Thuật toán Dijkstra tìm đường ngắn nhất có trọng số.
+ * Hỗ trợ trait-aware cost và cạnh thang (LadderObject).
  */
-export function dijkstra(grid: Grid, start: Pos, goal: Pos): AlgoResult {
+export function dijkstra(
+  grid: Grid,
+  start: Pos,
+  goal: Pos,
+  trait: EnemyTrait = EnemyTrait.NONE,
+  ladders: LadderObject[] = []
+): AlgoResult {
   const t0 = performance.now();
   const cols = grid[0].length;
 
@@ -93,7 +98,11 @@ export function dijkstra(grid: Grid, start: Pos, goal: Pos): AlgoResult {
       break;
     }
 
-    for (const { pos: neighbor, cost } of getNeighbors(grid, cur)) {
+    const neighbors = trait === EnemyTrait.NONE
+      ? getNeighbors(grid, cur, ladders)
+      : getNeighborsForTrait(grid, cur, trait, ladders);
+
+    for (const { pos: neighbor, cost } of neighbors) {
       const nId = posToId(neighbor, cols);
       if (visitedSet.has(nId)) continue;
 

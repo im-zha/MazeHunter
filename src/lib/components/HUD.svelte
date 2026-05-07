@@ -5,9 +5,10 @@
   let { onPause }: { onPause: () => void } = $props();
 
   const HEART = '❤';
-  const BOMB = '💣';
+  const BOMB  = '💣';
 
   const state = $derived($gameState);
+
   const powerUpPct = $derived(
     state.player.powerUpTimer > 0
       ? (state.player.powerUpTimer / 12000) * 100
@@ -18,6 +19,19 @@
     state.player.freezeTimer > 0
       ? (state.player.freezeTimer / 8000) * 100
       : 0
+  );
+
+  const maxBombs = 5;
+
+  const roundColor = $derived(
+    state.round === 3 ? '#ff4757' : state.round === 2 ? '#f97316' : '#39ff14'
+  );
+
+  const waveLimit = $derived(
+    state.round === 1 ? 90 : state.round === 2 ? 75 : 60
+  );
+  const timeRemainSec = $derived(
+    Math.max(0, waveLimit - Math.floor(state.timeElapsedMs / 1000))
   );
 </script>
 
@@ -30,10 +44,12 @@
       <span class="hud-value score-value">{state.score.toLocaleString()}</span>
     </div>
 
-    <!-- Wave -->
+    <!-- Round badge -->
     <div class="hud-block hud-center">
-      <span class="hud-label">WAVE</span>
-      <span class="hud-value wave-value">{state.wave}</span>
+      <span class="hud-label">ROUND</span>
+      <span class="hud-value round-value" style="color:{roundColor};text-shadow:0 0 14px {roundColor}80;">
+        {state.round}
+      </span>
     </div>
 
     <!-- Lives -->
@@ -64,7 +80,7 @@
         {#each Array(state.player.wallBombs) as _}
           <span class="bomb">{BOMB}</span>
         {/each}
-        {#each Array(Math.max(0, 3 - state.player.wallBombs)) as _}
+        {#each Array(Math.max(0, maxBombs - state.player.wallBombs)) as _}
           <span class="bomb used">{BOMB}</span>
         {/each}
       </span>
@@ -92,7 +108,7 @@
 
     <!-- Controls hint -->
     <div class="hud-block hud-right controls-hint">
-      <span>WASD / Arrows · Space: Wall · F1: Debug</span>
+      <span>WASD/Arrows · Space:Wall · E:Ladder · F1:Debug</span>
     </div>
   </div>
 </div>
@@ -127,7 +143,7 @@
   }
 
   .hud-center { flex: 1; text-align: center; align-items: center; }
-  .hud-right { margin-left: auto; align-items: flex-end; }
+  .hud-right  { margin-left: auto; align-items: flex-end; }
 
   .hud-label {
     font-size: 10px;
@@ -152,9 +168,12 @@
     text-shadow: 0 0 10px rgba(57,255,20,0.5);
   }
 
-  .hud-right-most {
-    margin-left: 12px;
+  .round-value {
+    font-size: 22px;
+    font-weight: 900;
   }
+
+  .hud-right-most { margin-left: 12px; }
 
   .icon-btn {
     background: rgba(255,255,255,0.1);
@@ -170,25 +189,12 @@
     font-size: 18px;
     transition: all 0.15s ease;
   }
-
-  .icon-btn:hover {
-    background: rgba(255,255,255,0.2);
-    transform: scale(1.05);
-  }
-
-  .icon-btn:active {
-    transform: scale(0.95);
-  }
-
-  .wave-value {
-    font-size: 26px;
-    color: #f72585;
-    text-shadow: 0 0 14px rgba(247,37,133,0.6);
-  }
+  .icon-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+  .icon-btn:active { transform: scale(0.95); }
 
   .heart { font-size: 18px; }
   .heart.dead { opacity: 0.2; }
-  .bomb { font-size: 18px; }
+  .bomb  { font-size: 18px; }
   .bomb.used { opacity: 0.2; filter: grayscale(1); }
 
   .power-up-bar-wrap {
@@ -199,10 +205,7 @@
     padding: 0 8px;
   }
 
-  .crystal-label {
-    color: #f72585;
-    text-shadow: 0 0 6px rgba(247,37,133,0.7);
-  }
+  .crystal-label { color: #f72585; text-shadow: 0 0 6px rgba(247,37,133,0.7); }
 
   .power-up-bar {
     height: 6px;
@@ -219,17 +222,14 @@
     box-shadow: 0 0 8px rgba(247,37,133,0.7);
   }
 
-  .freeze-label {
-    color: #00e5ff;
-    text-shadow: 0 0 6px rgba(0, 229, 255, 0.7);
-  }
+  .freeze-label { color: #00e5ff; text-shadow: 0 0 6px rgba(0,229,255,0.7); }
 
   .freeze-fill {
     height: 100%;
     background: linear-gradient(90deg, #0077ff, #00e5ff);
     border-radius: 9999px;
     transition: width 0.1s linear;
-    box-shadow: 0 0 8px rgba(0, 229, 255, 0.7);
+    box-shadow: 0 0 8px rgba(0,229,255,0.7);
   }
 
   .controls-hint {

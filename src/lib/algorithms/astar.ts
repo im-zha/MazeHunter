@@ -2,14 +2,14 @@
 // astar.ts — A* Search (weighted + heuristic)
 // ============================================================
 
-import { type AlgoResult, type Grid, type Pos } from '../core/types.js';
-import { getNeighbors, manhattan, posEqual, posToId } from '../core/graph.js';
+import { EnemyTrait, type AlgoResult, type Grid, type LadderObject, type Pos } from '../core/types.js';
+import { getNeighbors, getNeighborsForTrait, manhattan, posEqual, posToId } from '../core/graph.js';
 
 // --------------- Min-Heap ---------------
 
 interface HeapNode {
   pos: Pos;
-  f: number; // g + h
+  f: number;
 }
 
 class MinHeap {
@@ -58,10 +58,16 @@ class MinHeap {
 // --------------- A* ---------------
 
 /**
- * A* search with Manhattan heuristic + terrain weights.
- * Most efficient pathfinder — used by the Hunter enemy.
+ * Thuật toán A* kết hợp heuristic Manhattan và trọng số địa hình.
+ * Hỗ trợ trait-aware cost và cạnh thang (LadderObject) qua tham số tùy chọn.
  */
-export function astar(grid: Grid, start: Pos, goal: Pos): AlgoResult {
+export function astar(
+  grid: Grid,
+  start: Pos,
+  goal: Pos,
+  trait: EnemyTrait = EnemyTrait.NONE,
+  ladders: LadderObject[] = []
+): AlgoResult {
   const t0 = performance.now();
   const cols = grid[0].length;
 
@@ -94,7 +100,11 @@ export function astar(grid: Grid, start: Pos, goal: Pos): AlgoResult {
 
     const curG = g.get(curId) ?? Infinity;
 
-    for (const { pos: neighbor, cost } of getNeighbors(grid, cur)) {
+    const neighbors = trait === EnemyTrait.NONE
+      ? getNeighbors(grid, cur, ladders)
+      : getNeighborsForTrait(grid, cur, trait, ladders);
+
+    for (const { pos: neighbor, cost } of neighbors) {
       const nId = posToId(neighbor, cols);
       if (closedSet.has(nId)) continue;
 

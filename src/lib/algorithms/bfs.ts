@@ -2,17 +2,20 @@
 // bfs.ts — Breadth-First Search (unweighted shortest path)
 // ============================================================
 
-import { type AlgoResult, type Grid, type Pos } from '../core/types.js';
-import { getUnweightedNeighbors, posEqual, posToId } from '../core/graph.js';
+import { EnemyTrait, type AlgoResult, type Grid, type LadderObject, type Pos } from '../core/types.js';
+import { getUnweightedNeighbors, getUnweightedNeighborsForTrait, posEqual, posToId } from '../core/graph.js';
 
 /**
- * BFS from `start` to `goal` on the given grid.
- * Returns path (start→goal inclusive), all visited positions (for debug overlay),
- * and compute time in ms.
- *
- * If no path exists, returns an empty path array but still returns all visited cells.
+ * Thuật toán BFS tìm đường ngắn nhất không trọng số.
+ * Hỗ trợ trait-aware passability và cạnh thang (LadderObject).
  */
-export function bfs(grid: Grid, start: Pos, goal: Pos): AlgoResult {
+export function bfs(
+  grid: Grid,
+  start: Pos,
+  goal: Pos,
+  trait: EnemyTrait = EnemyTrait.NONE,
+  ladders: LadderObject[] = []
+): AlgoResult {
   const t0 = performance.now();
   const cols = grid[0].length;
 
@@ -37,7 +40,11 @@ export function bfs(grid: Grid, start: Pos, goal: Pos): AlgoResult {
       break;
     }
 
-    for (const neighbor of getUnweightedNeighbors(grid, cur)) {
+    const neighbors = trait === EnemyTrait.NONE
+      ? getUnweightedNeighbors(grid, cur, ladders)
+      : getUnweightedNeighborsForTrait(grid, cur, trait, ladders);
+
+    for (const neighbor of neighbors) {
       const nId = posToId(neighbor, cols);
       if (!visitedSet.has(nId)) {
         visitedSet.add(nId);
@@ -49,8 +56,6 @@ export function bfs(grid: Grid, start: Pos, goal: Pos): AlgoResult {
 
   const path: Pos[] = [];
   if (found) {
-    // Reconstruct path from goal → start, then reverse
-    const rows = grid.length;
     let cur = posToId(goal, cols);
     while (cur !== -1) {
       const row = Math.floor(cur / cols);
@@ -68,10 +73,14 @@ export function bfs(grid: Grid, start: Pos, goal: Pos): AlgoResult {
 }
 
 /**
- * Max-distance BFS — find the position reachable from `start` with
- * the greatest BFS distance from `from`. Used for enemy flee targeting.
+ * BFS tìm khoảng cách xa nhất — dùng khi kẻ địch ở trạng thái bỏ chạy.
  */
-export function maxDistanceBfs(grid: Grid, from: Pos, start: Pos): Pos {
+export function maxDistanceBfs(
+  grid: Grid,
+  from: Pos,
+  start: Pos,
+  ladders: LadderObject[] = []
+): Pos {
   const cols = grid[0].length;
   const visitedSet = new Set<number>();
   const queue: Pos[] = [start];
@@ -82,7 +91,7 @@ export function maxDistanceBfs(grid: Grid, from: Pos, start: Pos): Pos {
     const cur = queue.shift()!;
     farthest = cur;
 
-    for (const neighbor of getUnweightedNeighbors(grid, cur)) {
+    for (const neighbor of getUnweightedNeighbors(grid, cur, ladders)) {
       const nId = posToId(neighbor, cols);
       if (!visitedSet.has(nId)) {
         visitedSet.add(nId);

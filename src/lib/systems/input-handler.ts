@@ -2,14 +2,24 @@
 // input-handler.ts — Keyboard + Touch → Action queue
 // ============================================================
 
+/** Enum đại diện cho Action. */
 export enum Action {
-  MOVE_UP    = 'MOVE_UP',
-  MOVE_DOWN  = 'MOVE_DOWN',
-  MOVE_LEFT  = 'MOVE_LEFT',
-  MOVE_RIGHT = 'MOVE_RIGHT',
-  PLACE_WALL = 'PLACE_WALL',
-  TOGGLE_DEBUG = 'TOGGLE_DEBUG',
-  PAUSE = 'PAUSE',
+  /** Phần tử Enum MOVE_UP. */
+    MOVE_UP    = 'MOVE_UP',
+  /** Phần tử Enum MOVE_DOWN. */
+    MOVE_DOWN  = 'MOVE_DOWN',
+  /** Phần tử Enum MOVE_LEFT. */
+    MOVE_LEFT  = 'MOVE_LEFT',
+  /** Phần tử Enum MOVE_RIGHT. */
+    MOVE_RIGHT = 'MOVE_RIGHT',
+  /** Phần tử Enum PLACE_WALL. */
+    PLACE_WALL = 'PLACE_WALL',
+  /** Phần tử Enum TOGGLE_DEBUG. */
+    TOGGLE_DEBUG = 'TOGGLE_DEBUG',
+  /** Phần tử Enum PAUSE. */
+    PAUSE = 'PAUSE',
+  /** Interact (e.g. use ladder). */
+    INTERACT = 'INTERACT',
 }
 
 const KEY_MAP: Record<string, Action> = {
@@ -29,6 +39,9 @@ const KEY_MAP: Record<string, Action> = {
   Escape:     Action.PAUSE,
   p:          Action.PAUSE,
   P:          Action.PAUSE,
+  e:          Action.INTERACT,
+  E:          Action.INTERACT,
+  Enter:      Action.INTERACT,
 };
 
 // Special key for debug toggle (separate from WASD confusion)
@@ -36,14 +49,20 @@ const DEBUG_KEY = 'F1';
 
 const SWIPE_THRESHOLD = 30; // px
 
+/** Lớp đại diện cho InputHandler. */
 export class InputHandler {
-  private _queue: Action[] = [];
-  private _touchStart: { x: number; y: number } | null = null;
+  /** Thuộc tính _queue. */
+    private _queue: Action[] = [];
+  /** Thuộc tính _touchStart. */
+    private _touchStart: { x: number; y: number } | null = null;
 
   // Bound event handlers (kept as refs for cleanup)
-  private _onKeyDown: (e: KeyboardEvent) => void;
-  private _onTouchStart: (e: TouchEvent) => void;
-  private _onTouchEnd: (e: TouchEvent) => void;
+  /** Thuộc tính _onKeyDown. */
+    private _onKeyDown: (e: KeyboardEvent) => void;
+  /** Thuộc tính _onTouchStart. */
+    private _onTouchStart: (e: TouchEvent) => void;
+  /** Thuộc tính _onTouchEnd. */
+    private _onTouchEnd: (e: TouchEvent) => void;
 
   constructor() {
     this._onKeyDown = (e: KeyboardEvent) => {
@@ -89,13 +108,15 @@ export class InputHandler {
     };
   }
 
-  attach() {
+  /** Phương thức attach. */
+    attach() {
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('touchstart', this._onTouchStart, { passive: true });
     window.addEventListener('touchend', this._onTouchEnd, { passive: true });
   }
 
-  detach() {
+  /** Phương thức detach. */
+    detach() {
     window.removeEventListener('keydown', this._onKeyDown);
     window.removeEventListener('touchstart', this._onTouchStart);
     window.removeEventListener('touchend', this._onTouchEnd);

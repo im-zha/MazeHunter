@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS, type Settings } from '../core/types.js';
 
 const STORAGE_KEY = 'mazehunter_settings';
 
+/** Hàm loadSettings. */
 function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -21,6 +22,7 @@ function loadSettings(): Settings {
   return { ...DEFAULT_SETTINGS };
 }
 
+/** Hàm createSettingsStore. */
 function createSettingsStore() {
   const { subscribe, set, update } = writable<Settings>(loadSettings());
 

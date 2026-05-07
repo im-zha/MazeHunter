@@ -6,10 +6,12 @@ import { writable } from 'svelte/store';
 import { GamePhase, type GameState } from '../core/types.js';
 import { DEFAULT_SETTINGS } from '../core/types.js';
 
+/** Hàm createInitialGameState. */
 function createInitialGameState(): GameState {
   return {
     phase: GamePhase.MENU,
     score: 0,
+    round: 1,
     wave: 1,
     lives: 3,
     timeElapsedMs: 0,
@@ -21,11 +23,22 @@ function createInitialGameState(): GameState {
       isSliding: false,
       slideDir: null,
       freezeTimer: 0,
+      mudBlocked: false,
+      isClimbing: false,
+      climbTimer: 0,
+      climbDuration: 0,
+      climbStart: null,
+      climbEnd: null,
     },
     enemies: [],
     grid: [],
+    ladders: [],
+    timedEvents: [],
+    lastEventLabel: '',
+    eventLabelTimer: 0,
     fogEnabled: DEFAULT_SETTINGS.fogEnabled,
     debugMode: false,
+    bridgeOccupancy: {},
   };
 }
 

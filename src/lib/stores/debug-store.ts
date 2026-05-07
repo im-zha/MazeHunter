@@ -10,6 +10,7 @@ import { writable } from 'svelte/store';
  */
 export const debugMode = writable<boolean>(false);
 
+/** Hàm toggleDebug. */
 export function toggleDebug() {
   debugMode.update(v => !v);
 }

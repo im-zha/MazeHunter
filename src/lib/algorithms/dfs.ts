@@ -2,17 +2,21 @@
 // dfs.ts — Iterative Depth-First Search
 // ============================================================
 
-import { type AlgoResult, type Grid, type Pos } from '../core/types.js';
-import { getUnweightedNeighbors, posEqual, posToId } from '../core/graph.js';
+import { EnemyTrait, type AlgoResult, type Grid, type LadderObject, type Pos } from '../core/types.js';
+import { getUnweightedNeighbors, getUnweightedNeighborsForTrait, posEqual, posToId } from '../core/graph.js';
 
 /**
- * Iterative DFS from `start` to `goal`.
- * Does NOT guarantee shortest path — produces a winding, unpredictable path
- * which makes the Shadow enemy feel erratic and scary.
- *
- * Returns full visited list for debug overlay.
+ * Thuật toán DFS lặp (không đảm bảo tìm đường ngắn nhất).
+ * Tạo ra đường đi ngoằn ngoèo cho kẻ địch Shadow.
+ * Hỗ trợ trait-aware passability và cạnh thang (LadderObject).
  */
-export function dfs(grid: Grid, start: Pos, goal: Pos): AlgoResult {
+export function dfs(
+  grid: Grid,
+  start: Pos,
+  goal: Pos,
+  trait: EnemyTrait = EnemyTrait.NONE,
+  ladders: LadderObject[] = []
+): AlgoResult {
   const t0 = performance.now();
   const cols = grid[0].length;
 
@@ -39,8 +43,10 @@ export function dfs(grid: Grid, start: Pos, goal: Pos): AlgoResult {
       break;
     }
 
-    // Push neighbors in reverse order so we process them in natural order
-    const neighbors = getUnweightedNeighbors(grid, cur);
+    const neighbors = trait === EnemyTrait.NONE
+      ? getUnweightedNeighbors(grid, cur, ladders)
+      : getUnweightedNeighborsForTrait(grid, cur, trait, ladders);
+
     for (let i = neighbors.length - 1; i >= 0; i--) {
       const neighbor = neighbors[i];
       const nId = posToId(neighbor, cols);
