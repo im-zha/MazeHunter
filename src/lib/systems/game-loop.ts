@@ -660,7 +660,12 @@ export class GameLoop {
     }
 
     const lives   = isRestart ? getRoundLives(round) : (this._state?.lives ?? getRoundLives(round));
-    const bombs   = getRoundBombs(round);
+    
+    let bombs = getRoundBombs(round);
+    if (!isRestart && this._state && this._state.player) {
+      bombs = Math.min(5, this._state.player.wallBombs + 1);
+    }
+    
     const player  = createPlayer(validStart, bombs);
     player.isClimbing = false;
 
