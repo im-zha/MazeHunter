@@ -1,5 +1,85 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+/* ── Dark mode class strategy ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Design Token Theme (Tailwind v4 @theme) ── */
+@theme {
+  /* === Colors === */
+  --color-primary:                    #4edea3;
+  --color-primary-fixed:              #6ffbbe;
+  --color-primary-fixed-dim:          #4edea3;
+  --color-primary-container:          #10b981;
+  --color-on-primary:                 #003824;
+  --color-on-primary-fixed:           #002113;
+  --color-on-primary-fixed-variant:   #005236;
+  --color-on-primary-container:       #00422b;
+  --color-inverse-primary:            #006c49;
+
+  --color-secondary:                  #ffb95f;
+  --color-secondary-fixed:            #ffddb8;
+  --color-secondary-fixed-dim:        #ffb95f;
+  --color-secondary-container:        #ee9800;
+  --color-on-secondary:               #472a00;
+  --color-on-secondary-fixed:         #2a1700;
+  --color-on-secondary-fixed-variant: #653e00;
+  --color-on-secondary-container:     #5b3800;
+
+  --color-tertiary:                   #ffb3ad;
+  --color-tertiary-fixed:             #ffdad7;
+  --color-tertiary-fixed-dim:         #ffb3ad;
+  --color-tertiary-container:         #ff7a73;
+  --color-on-tertiary:                #68000a;
+  --color-on-tertiary-fixed:          #410004;
+  --color-on-tertiary-fixed-variant:  #930013;
+  --color-on-tertiary-container:      #79000e;
+
+  --color-background:                 #131315;
+  --color-surface:                    #131315;
+  --color-surface-dim:                #131315;
+  --color-surface-bright:             #39393b;
+  --color-surface-variant:            #353437;
+  --color-surface-tint:               #4edea3;
+  --color-surface-container-lowest:   #0e0e10;
+  --color-surface-container-low:      #1c1b1d;
+  --color-surface-container:          #201f21;
+  --color-surface-container-high:     #2a2a2c;
+  --color-surface-container-highest:  #353437;
+  --color-on-background:              #e5e1e4;
+  --color-on-surface:                 #e5e1e4;
+  --color-on-surface-variant:         #bbcabf;
+  --color-inverse-surface:            #e5e1e4;
+  --color-inverse-on-surface:         #313032;
+
+  --color-outline:                    #86948a;
+  --color-outline-variant:            #3c4a42;
+
+  --color-error:                      #ffb4ab;
+  --color-error-container:            #93000a;
+  --color-on-error:                   #690005;
+  --color-on-error-container:         #ffdad6;
+
+  /* === Border Radius === */
+  --radius:      0px;
+  --radius-lg:   0px;
+  --radius-xl:   0px;
+  --radius-full: 9999px;
+
+  /* === Spacing === */
+  --spacing-unit:          4px;
+  --spacing-gutter:        16px;
+  --spacing-margin:        24px;
+  --spacing-container-max: 1440px;
+
+  /* === Font Families === */
+  --font-display-lg:  'Inter', sans-serif;
+  --font-headline-md: 'Inter', sans-serif;
+  --font-body-md:     'Inter', sans-serif;
+  --font-label-caps:  'JetBrains Mono', monospace;
+  --font-data-sm:     'JetBrains Mono', monospace;
+  --font-data-lg:     'JetBrains Mono', monospace;
+}
 
 /* ── Global Reset ── */
 *, *::before, *::after {
@@ -10,16 +90,12 @@ html, body {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
   min-height: 100dvh;
-  background: #0d0d1f;
-  color: #ffffff;
-  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* ── CSS Custom Properties ── */
+/* ── Legacy CSS Custom Properties (game canvas compatibility) ── */
 :root {
   --color-bg:        #0d0d1f;
   --color-surface:   #1a1a2e;
@@ -33,7 +109,46 @@ html, body {
   --color-muted:     rgba(255, 255, 255, 0.45);
 }
 
+/* ── Material Symbols ── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  line-height: 1;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Custom Landing Page Utility Classes ── */
+.scanline-overlay {
+  background:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+.glow-border {
+  border: 1px solid #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(78, 222, 163, 0.5);
+}
+
+.tactical-panel {
+  background: rgba(20, 20, 22, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(134, 148, 138, 0.2);
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--color-bg); }
-::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 9999px; }
+::-webkit-scrollbar-track { background: #131315; }
+::-webkit-scrollbar-thumb { background: #4edea3; border-radius: 9999px; }

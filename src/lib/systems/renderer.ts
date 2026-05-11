@@ -562,7 +562,34 @@ export class Renderer {
       ctx.restore();
     }
 
+    // Ladder interaction visual cue
+    if (!player.isClimbing && state.ladders) {
+      const isOnLadderEntrance = state.ladders.some(ladder => {
+        if (!ladder.path_nodes || ladder.path_nodes.length < 2) return false;
+        const start = ladder.path_nodes[0];
+        const end = ladder.path_nodes[ladder.path_nodes.length - 1];
+        return (player.pos.col === start.col && player.pos.row === start.row) ||
+               (player.pos.col === end.col && player.pos.row === end.row);
+      });
 
+      if (isOnLadderEntrance) {
+        const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
+        ctx.save();
+        ctx.globalAlpha = 0.5 + pulse * 0.5;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        const boxWidth = 32;
+        const boxHeight = 18;
+        ctx.fillRect(cx - boxWidth / 2, cy - r - 25, boxWidth, boxHeight);
+        
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('[ E ]', cx, cy - r - 16);
+        ctx.restore();
+      }
+    }
   }
 
   private _drawEnemies(enemies: EnemyState[], offsetX: number, offsetY: number) {
