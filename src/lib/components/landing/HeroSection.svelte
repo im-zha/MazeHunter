@@ -21,7 +21,7 @@
 <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
   <!-- Maze Background with Fog -->
   <div class="absolute inset-0 z-0">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#131315_70%)] z-10"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#131315_70%)] z-10"></div>
     <div class="absolute inset-0 bg-background/40 z-20"></div>
     <div
       class="w-full h-full opacity-30 grayscale"

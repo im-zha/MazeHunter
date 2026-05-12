@@ -159,11 +159,6 @@ export class GameLoop {
         ...savedState.player, 
         pos: validStartPos,
         mudBlocked: false, 
-        isClimbing: false, 
-        climbTimer: 0, 
-        climbDuration: 0, 
-        climbStart: null, 
-        climbEnd: null 
       },
     };
 

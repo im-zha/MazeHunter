@@ -130,7 +130,7 @@
           {#each Array(3) as _, i}
             {#if i < currentLives}
               <!-- Active life: glowing green block -->
-              <div class="w-5 h-5 rounded-sm bg-primary shadow-[0_0_8px_theme('colors.primary')]
+              <div class="w-5 h-5 rounded-sm bg-primary shadow-[0_0_8px_var(--color-primary)]
                           border border-primary/60 transition-all duration-300">
               </div>
             {:else}
@@ -165,7 +165,7 @@
           <!-- Progress bar -->
           <div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
             <div
-              class="bg-primary h-full rounded-full shadow-[0_0_10px_theme('colors.primary')]
+              class="bg-primary h-full rounded-full shadow-[0_0_10px_var(--color-primary)]
                      transition-[width] duration-100 ease-linear"
               style="width: {crystalPct}%"
             ></div>
@@ -190,7 +190,7 @@
           <!-- Progress bar -->
           <div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
             <div
-              class="bg-primary h-full rounded-full shadow-[0_0_10px_theme('colors.primary')]
+              class="bg-primary h-full rounded-full shadow-[0_0_10px_var(--color-primary)]
                      transition-[width] duration-100 ease-linear"
               style="width: {freezePct}%"
             ></div>

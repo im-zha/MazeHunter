@@ -140,7 +140,7 @@
             style="background-image: url('{archetype.img}'); background-size: cover; background-position: center; background-color: {archetype.panelBg};"
             aria-hidden="true"
           >
-            <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
+            <div class="absolute inset-0 bg-linear-to-t from-background to-transparent"></div>
           </div>
 
           <!-- Card body -->

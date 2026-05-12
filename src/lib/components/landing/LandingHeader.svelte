@@ -71,7 +71,7 @@
           {statusText}
         </span>
       </div>
-      <div class="w-[1px] h-6 bg-outline-variant"></div>
+      <div class="w-px h-6 bg-outline-variant"></div>
       <!-- Menu button → opens sidebar -->
       <button
         id="sidebar-open-btn"
@@ -91,7 +91,7 @@
   <!-- Backdrop -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-[60] bg-background/60 backdrop-blur-sm"
+    class="fixed inset-0 z-60 bg-background/60 backdrop-blur-sm"
     onclick={() => (sidebarOpen = false)}
     onkeydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}
     role="presentation"
@@ -99,7 +99,7 @@
 
   <!-- Panel -->
   <aside
-    class="fixed top-0 right-0 h-full w-80 z-[70] flex flex-col sidebar-slide-in"
+    class="fixed top-0 right-0 h-full w-80 z-70 flex flex-col sidebar-slide-in"
     style="background: rgba(14,14,16,0.97); border-left: 1px solid rgba(134,148,138,0.2); backdrop-filter: blur(16px);"
     aria-label="Command Center"
   >
@@ -123,6 +123,7 @@
     <div class="flex border-b border-outline-variant/30">
       {#each tabs as tab}
         <button
+          role="tab"
           id="sidebar-tab-{tab.id}"
           onclick={() => (activeTab = tab.id)}
           class="flex-1 py-3 flex flex-col items-center gap-0.5 transition-colors
@@ -173,7 +174,7 @@
           </div>
         </div>
 
-        <div class="w-full h-[1px] bg-outline-variant/30"></div>
+        <div class="w-full h-px bg-outline-variant/30"></div>
 
         <!-- Visuals -->
         <div>
@@ -185,6 +186,7 @@
             </div>
             <button
               role="switch"
+              aria-label="Toggle Scanlines"
               aria-checked={scanlines}
               onclick={() => (scanlines = !scanlines)}
               class="relative w-10 h-5 rounded-full transition-colors {scanlines ? 'bg-primary' : 'bg-outline-variant'}"
@@ -248,6 +250,7 @@
             <button
               id="debug-{toggle.id}"
               role="switch"
+              aria-label="Toggle {toggle.label}"
               aria-checked={isOn}
               onclick={() => {
                 if (toggle.bind_key === 'showAIPaths')   showAIPaths   = !showAIPaths;

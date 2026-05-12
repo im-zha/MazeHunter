@@ -40,7 +40,7 @@
           Advanced tactical systems integrated for optimal survival and algorithmic mastery.
         </p>
       </div>
-      <div class="h-[1px] flex-1 bg-outline-variant mb-3 hidden md:block"></div>
+      <div class="h-px flex-1 bg-outline-variant mb-3 hidden md:block"></div>
     </div>
 
     <!-- Features grid — 2 cols on md, 4 on lg -->
