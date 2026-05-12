@@ -1,9 +1,21 @@
 <!-- HeroSection.svelte — Full-screen hero with maze background -->
 <script lang="ts">
   interface Props {
-    onStartGame: () => void;
+    onStartGame: (difficulty: 'easy' | 'medium' | 'hard') => void;
   }
   let { onStartGame }: Props = $props();
+
+  /** Controls whether the difficulty picker is visible */
+  let showDifficultyModal = $state(false);
+
+  function scrollToAI() {
+    document.getElementById('ai-archetypes')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function pickDifficulty(level: 'easy' | 'medium' | 'hard') {
+    showDifficultyModal = false;
+    onStartGame(level);
+  }
 </script>
 
 <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -37,19 +49,65 @@
       procedurally generated labyrinth where every step is a calculation.
     </p>
 
-    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-      <button
-        id="hero-start-btn"
-        onclick={onStartGame}
-        class="group relative px-10 py-4 bg-primary text-on-primary font-bold uppercase tracking-widest text-sm overflow-hidden transition-all hover:bg-primary-container"
-      >
-        <span class="relative z-10">START MISSION</span>
-        <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
-      </button>
-      <button class="px-10 py-4 border border-outline text-white font-bold uppercase tracking-widest text-sm hover:bg-white/5 transition-colors">
-        VIEW ALGORITHMS
-      </button>
-    </div>
+    <!-- CTA buttons -->
+    {#if !showDifficultyModal}
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <!-- START MISSION: opens difficulty picker -->
+        <button
+          id="hero-start-btn"
+          onclick={() => (showDifficultyModal = true)}
+          class="group relative px-10 py-4 bg-primary text-on-primary font-bold uppercase tracking-widest text-sm overflow-hidden transition-all hover:bg-primary-container"
+        >
+          <span class="relative z-10">START MISSION</span>
+          <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+        </button>
+
+        <!-- VIEW ALGORITHMS: smooth-scrolls to AI section -->
+        <button
+          id="hero-view-algo-btn"
+          onclick={scrollToAI}
+          class="px-10 py-4 border border-outline text-white font-bold uppercase tracking-widest text-sm hover:bg-white/5 transition-colors"
+        >
+          VIEW ALGORITHMS
+        </button>
+      </div>
+    {:else}
+      <!-- Difficulty picker (replaces CTA row) -->
+      <div class="flex flex-col items-center gap-4 animate-fade-in">
+        <p class="font-label-caps text-xs text-primary tracking-widest uppercase mb-2">
+          Select Difficulty Level
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            id="diff-easy-btn"
+            onclick={() => pickDifficulty('easy')}
+            class="px-10 py-4 bg-primary/20 border border-primary/50 text-primary font-bold uppercase tracking-widest text-sm hover:bg-primary hover:text-on-primary transition-all"
+          >
+            EASY
+          </button>
+          <button
+            id="diff-medium-btn"
+            onclick={() => pickDifficulty('medium')}
+            class="px-10 py-4 bg-secondary/20 border border-secondary/50 text-secondary font-bold uppercase tracking-widest text-sm hover:bg-secondary hover:text-on-secondary transition-all"
+          >
+            MEDIUM
+          </button>
+          <button
+            id="diff-hard-btn"
+            onclick={() => pickDifficulty('hard')}
+            class="px-10 py-4 bg-tertiary/20 border border-tertiary/50 text-tertiary font-bold uppercase tracking-widest text-sm hover:bg-tertiary hover:text-on-tertiary transition-all"
+          >
+            HARD
+          </button>
+        </div>
+        <button
+          onclick={() => (showDifficultyModal = false)}
+          class="font-label-caps text-[10px] text-outline uppercase tracking-widest hover:text-white transition-colors mt-1"
+        >
+          ← CANCEL
+        </button>
+      </div>
+    {/if}
   </div>
 
   <!-- Scroll Indicator -->

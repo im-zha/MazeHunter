@@ -12,45 +12,46 @@
 
   interface Props {
     hasSave: boolean;
-    onNewGame: () => void;
     onContinue: () => void;
-    onEndless: () => void;
+    onLeaderboard: () => void;
+    onSettings: () => void;
+    onHowToPlay: () => void;
   }
-  let { hasSave, onNewGame, onContinue, onEndless }: Props = $props();
+  let { hasSave, onContinue, onLeaderboard, onSettings, onHowToPlay }: Props = $props();
 
   const menuItems: MenuItem[] = [
     {
       id: '01',
-      icon: 'play_arrow',
-      iconFill: true,
-      label: 'New Game',
-      desc: 'Initialize new sequence generation.',
-      action: () => onNewGame(),
-    },
-    {
-      id: '02',
       icon: 'history',
       iconFill: false,
       label: 'Continue',
-      desc: 'Resume active infiltration at Sector 7.',
+      desc: 'Resume active infiltration at your last checkpoint.',
       action: () => onContinue(),
       disabled: () => !hasSave,
     },
     {
-      id: '03',
-      icon: 'all_inclusive',
-      iconFill: false,
-      label: 'Endless Mode',
-      desc: 'Test survival limits in infinite loops.',
-      action: () => onEndless(),
-    },
-    {
-      id: '04',
+      id: '02',
       icon: 'leaderboard',
       iconFill: false,
       label: 'Leaderboards',
-      desc: 'Global efficiency rankings.',
-      action: () => {},
+      desc: 'Global efficiency rankings and top survival times.',
+      action: () => onLeaderboard(),
+    },
+    {
+      id: '03',
+      icon: 'settings',
+      iconFill: false,
+      label: 'Settings',
+      desc: 'Adjust audio, display, keybindings, and difficulty presets.',
+      action: () => onSettings(),
+    },
+    {
+      id: '04',
+      icon: 'help_outline',
+      iconFill: false,
+      label: 'How to Play',
+      desc: 'Mission briefing: controls, objectives, and survival tips.',
+      action: () => onHowToPlay(),
     },
   ];
 </script>
@@ -65,7 +66,7 @@
           <button
             id="menu-{item.id}"
             onclick={item.action}
-            class="tactical-panel p-6 group cursor-pointer hover:border-primary transition-all text-left w-full"
+            class="tactical-panel p-6 group cursor-pointer hover:border-primary transition-all text-left w-full disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={item.disabled?.() ?? false}
           >
             <div class="flex items-center justify-between mb-4">
@@ -79,7 +80,7 @@
               {item.label}
             </h3>
             <p class="text-sm text-on-surface-variant mt-2">{item.desc}</p>
-            {#if item.id === '02' && !hasSave}
+            {#if item.id === '01' && !hasSave}
               <p class="text-xs text-outline mt-1 italic">No save found.</p>
             {/if}
           </button>

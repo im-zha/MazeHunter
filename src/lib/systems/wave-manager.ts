@@ -135,12 +135,34 @@ export function buildWave(
 
   const round = Math.max(1, Math.min(3, wave)); // clamp to 1-3
   const baseInterval = BASE_INTERVAL[difficulty] ?? BASE_INTERVAL.normal;
-  const roster = ROUND_ROSTERS[round - 1];
+  const roster = [...ROUND_ROSTERS[round - 1]];
+
+  // --- ENDLESS SCALING ---
+  let baseSize = 21;
+  if (difficulty === 'easy') baseSize = 15;
+  if (difficulty === 'hard') baseSize = 27;
+  const MAX_GRID_SIZE = 35;
+
+  let roundHitMax = 1;
+  while (baseSize + Math.floor((roundHitMax - 1) / 3) * 4 < MAX_GRID_SIZE) {
+    roundHitMax++;
+  }
+
+  if (wave >= roundHitMax) {
+    const extra = Math.floor((wave - roundHitMax) / 2) + 1;
+    for (let i = 0; i < extra; i++) {
+      roster.push(
+        Math.random() < 0.5 
+          ? [AlgoType.ASTAR, EnemyTrait.HUNTER] 
+          : [AlgoType.DIJKSTRA, EnemyTrait.HEAVY]
+      );
+    }
+  }
+  // ----------------------
 
   const spawnPositions = pickSpawnPositions(grid, roster.length, playerPos);
 
-  // Round 3 gets a 15% speed boost on top of everything
-  const roundSpeedFactor = round === 3 ? 0.85 : 1.0;
+  const roundSpeedFactor = wave >= 3 ? 0.85 : 1.0;
 
   return roster.map(([algoType, trait], i) => {
     const pos = spawnPositions[i] ?? { row: rows_fallback(grid), col: 1 };

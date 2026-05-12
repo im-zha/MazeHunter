@@ -16,16 +16,12 @@
     hasSave = !!localStorage.getItem('mazehunter_save');
   });
 
-  function startGame() {
-    goto('/game');
+  function startGame(difficulty: 'easy' | 'medium' | 'hard' = 'medium') {
+    goto(`/game?difficulty=${difficulty}`);
   }
 
   function continueGame() {
     goto('/game?load=true');
-  }
-
-  function startEndless() {
-    goto('/game?mode=endless');
   }
 </script>
 
@@ -54,9 +50,10 @@
 
     <MainMenuSection
       {hasSave}
-      onNewGame={startGame}
       onContinue={continueGame}
-      onEndless={startEndless}
+      onLeaderboard={() => {}}
+      onSettings={() => {}}
+      onHowToPlay={() => {}}
     />
 
     <FeaturesSection />
