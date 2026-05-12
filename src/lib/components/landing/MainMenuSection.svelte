@@ -1,116 +1,111 @@
-<!-- MainMenuSection.svelte — Tactical menu grid + tech specs widget -->
+<!-- MainMenuSection.svelte — Tactical navigation cards (no Technical Specs widget) -->
 <script lang="ts">
   interface MenuItem {
     id: string;
     icon: string;
-    iconFill: boolean;
     label: string;
     desc: string;
     action: () => void;
     disabled?: () => boolean;
+    accent?: 'primary' | 'secondary' | 'tertiary';
   }
 
   interface Props {
     hasSave: boolean;
     onContinue: () => void;
     onLeaderboard: () => void;
-    onSettings: () => void;
     onHowToPlay: () => void;
+    onDebug: () => void;
   }
-  let { hasSave, onContinue, onLeaderboard, onSettings, onHowToPlay }: Props = $props();
+  let { hasSave, onContinue, onLeaderboard, onHowToPlay, onDebug }: Props = $props();
 
   const menuItems: MenuItem[] = [
     {
       id: '01',
       icon: 'history',
-      iconFill: false,
       label: 'Continue',
       desc: 'Resume active infiltration at your last checkpoint.',
       action: () => onContinue(),
       disabled: () => !hasSave,
+      accent: 'primary',
     },
     {
       id: '02',
       icon: 'leaderboard',
-      iconFill: false,
       label: 'Leaderboards',
       desc: 'Global efficiency rankings and top survival times.',
       action: () => onLeaderboard(),
+      accent: 'primary',
     },
     {
       id: '03',
-      icon: 'settings',
-      iconFill: false,
-      label: 'Settings',
-      desc: 'Adjust audio, display, keybindings, and difficulty presets.',
-      action: () => onSettings(),
+      icon: 'help_outline',
+      label: 'How to Play',
+      desc: 'Accessing system manual — controls, objectives, survival tips.',
+      action: () => onHowToPlay(),
+      accent: 'primary',
     },
     {
       id: '04',
-      icon: 'help_outline',
-      iconFill: false,
-      label: 'How to Play',
-      desc: 'Mission briefing: controls, objectives, and survival tips.',
-      action: () => onHowToPlay(),
+      icon: 'biotech',
+      label: 'Debug Mode',
+      desc: 'Action Replay & Algorithmic Analysis — developer access only.',
+      action: () => onDebug(),
+      accent: 'tertiary',
     },
   ];
 </script>
 
 <section class="py-20 bg-surface-container-lowest border-y border-outline-variant/30">
   <div class="container mx-auto px-margin">
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
 
-      <!-- Navigation cards -->
-      <div class="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {#each menuItems as item}
-          <button
-            id="menu-{item.id}"
-            onclick={item.action}
-            class="tactical-panel p-6 group cursor-pointer hover:border-primary transition-all text-left w-full disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled={item.disabled?.() ?? false}
-          >
-            <div class="flex items-center justify-between mb-4">
-              <span class="font-label-caps text-primary text-xs">{item.id}</span>
-              <span
-                class="material-symbols-outlined text-primary"
-                style={item.iconFill ? "font-variation-settings:'FILL' 1;" : ''}
-              >{item.icon}</span>
-            </div>
-            <h3 class="font-headline-md text-white group-hover:text-primary transition-colors text-lg font-bold">
-              {item.label}
-            </h3>
-            <p class="text-sm text-on-surface-variant mt-2">{item.desc}</p>
-            {#if item.id === '01' && !hasSave}
-              <p class="text-xs text-outline mt-1 italic">No save found.</p>
-            {/if}
-          </button>
-        {/each}
-      </div>
-
-      <!-- Technical Specs Widget -->
-      <div class="md:col-span-4 flex flex-col gap-4">
-        <div class="tactical-panel p-6 border-l-4 border-l-secondary">
-          <div class="flex items-center gap-2 mb-6">
-            <span class="material-symbols-outlined text-secondary">memory</span>
-            <h2 class="font-label-caps text-sm text-secondary uppercase font-bold">Technical Specs</h2>
-          </div>
-          <div class="space-y-4 font-data-sm text-[11px]">
-            {#each [['Framework','SvelteKit 2.0'],['Language','TypeScript 5.3'],['Core Engine','MazeGen-V4'],['Build ID','MH-992-ALPHA']] as [k, v]}
-              <div class="flex justify-between border-b border-outline-variant pb-2">
-                <span class="text-outline uppercase">{k}</span>
-                <span class="text-white">{v}</span>
-              </div>
-            {/each}
-            <div class="mt-6 p-3 bg-secondary/10 border border-secondary/20">
-              <p class="text-secondary leading-tight italic text-[11px]">
-                Warning: Debug Mode is currently enabled. System performance may fluctuate
-                during recursive pathfinding operations.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <!-- Section label -->
+    <div class="mb-8">
+      <p class="font-label-caps text-[9px] uppercase text-outline tracking-widest">Navigation</p>
+      <h2 class="font-display-lg text-2xl font-black text-white uppercase tracking-tight mt-1">Main Menu</h2>
     </div>
+
+    <!-- Navigation cards — full-width 2×2 grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {#each menuItems as item}
+        {@const isDebug = item.id === '04'}
+        <button
+          id="menu-{item.id}"
+          onclick={item.action}
+          class="tactical-panel p-6 group cursor-pointer text-left w-full
+            hover:scale-105 transition-all duration-300
+            disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100
+            {isDebug ? 'hover:border-tertiary' : 'hover:border-primary'}"
+          disabled={item.disabled?.() ?? false}
+        >
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-label-caps {isDebug ? 'text-tertiary' : 'text-primary'} text-xs">
+              {item.id}
+            </span>
+            <span class="material-symbols-outlined {isDebug ? 'text-tertiary' : 'text-primary'}">
+              {item.icon}
+            </span>
+          </div>
+
+          <h3 class="font-headline-md text-lg font-black text-white uppercase tracking-tight
+            {isDebug ? 'group-hover:text-tertiary' : 'group-hover:text-primary'} transition-colors">
+            {item.label}
+          </h3>
+
+          <p class="text-sm text-on-surface-variant mt-2 leading-relaxed">{item.desc}</p>
+
+          {#if item.id === '01' && !hasSave}
+            <p class="text-xs text-outline mt-2 italic font-label-caps tracking-wide">No save file found.</p>
+          {/if}
+
+          {#if isDebug}
+            <p class="font-label-caps text-[9px] uppercase text-tertiary/60 mt-3 tracking-widest">
+              ⚠ Dev Access Required
+            </p>
+          {/if}
+        </button>
+      {/each}
+    </div>
+
   </div>
 </section>

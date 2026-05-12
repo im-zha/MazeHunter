@@ -52,8 +52,8 @@
       {hasSave}
       onContinue={continueGame}
       onLeaderboard={() => {}}
-      onSettings={() => {}}
       onHowToPlay={() => {}}
+      onDebug={() => {}}
     />
 
     <FeaturesSection />
