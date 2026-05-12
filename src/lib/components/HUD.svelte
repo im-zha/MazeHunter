@@ -1,7 +1,7 @@
 <!-- HUD.svelte — In-game heads-up display overlay (redesigned) -->
 <script lang="ts">
   import { gameState } from '$lib/stores/game-state.js';
-  import { goto } from '$app/navigation';
+  import { MAP_THEMES } from '$lib/core/map-themes.js';
 
   let { onPause }: { onPause: () => void } = $props();
 
@@ -39,7 +39,39 @@
   /** Số mạng hiện tại */
   const currentLives = $derived(state.lives);
 
-  /** Event log — lấy từ lastEventLabel của store, bổ sung log mẫu */
+  /** Biome accent color (hex) — drives all HUD tint */
+  const biomeAccent = $derived(
+    (state.currentBiome && MAP_THEMES[state.currentBiome])
+      ? MAP_THEMES[state.currentBiome].primaryColor
+      : '#4edea3'
+  );
+
+  /** Tên biome hiện tại */
+  const biomeName = $derived(
+    (state.currentBiome && MAP_THEMES[state.currentBiome])
+      ? MAP_THEMES[state.currentBiome].label
+      : 'DATA JUNGLE'
+  );
+
+  /** Gimmick mô tả ngắn */
+  const biomeGimmick = $derived(
+    (state.currentBiome && MAP_THEMES[state.currentBiome])
+      ? MAP_THEMES[state.currentBiome].gimmickName
+      : ''
+  );
+
+  /** Player đang trong STEALTH NODE? */
+  const inStealth = $derived(state.playerInStealth ?? false);
+
+  /** Sensor Jam active (Data Jungle AoE)? */
+  const isSensorJammed = $derived((state.player?.sensorJamTimer ?? 0) > 0);
+  const sensorJamSec   = $derived(Math.ceil((state.player?.sensorJamTimer ?? 0) / 1000));
+
+  /** Active AoE events */
+  const aoeEvents = $derived(state.aoeEvents ?? []);
+  const aoeWarning = $derived(aoeEvents.filter(e => !e.detonated));
+
+  /** Event log — static sample entries */
   const systemLogs: { time: string; msg: string; type: 'info' | 'error' | 'crystal' }[] = [
     { time: '12:43:55', msg: 'SYS_INIT SEC_OK',        type: 'info'    },
     { time: '12:43:58', msg: 'ALGORITHM: A* PATHING',  type: 'info'    },
@@ -52,6 +84,17 @@
   function padRound(n: number) {
     return String(n).padStart(2, '0');
   }
+
+  /** Convert hex color (#rrggbb) to "r, g, b" string for CSS rgba() custom property. */
+  function hexToRgb(hex: string): string {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `${r}, ${g}, ${b}`;
+  }
+
+  const biomeAccentRgb = $derived(hexToRgb(biomeAccent));
 </script>
 
 <!--
@@ -71,10 +114,16 @@
   <div class="absolute inset-0 z-15 pointer-events-none freeze-vignette transition-opacity duration-300"></div>
 {/if}
 
+<!-- Sensor Jam vignette (Data Jungle AoE — dark green glitch) -->
+{#if isSensorJammed}
+  <div class="absolute inset-0 z-15 pointer-events-none sensor-jam-vignette"></div>
+{/if}
+
 <!-- ── Main HUD Container ─────────────────────────────────────────────── -->
 <!-- pointer-events-none on the wrapper; children opt-in with pointer-events-auto -->
 <div class="absolute inset-0 z-20 flex flex-col justify-between pointer-events-none p-margin hud-root"
-     class:freeze-theme={isFreezeActive}>
+     class:freeze-theme={isFreezeActive}
+     style="--biome-accent: {biomeAccent}; --biome-accent-rgb: {biomeAccentRgb}">
 
   <!-- ═══════════════════════════════ HEADER ════════════════════════════ -->
   <div class="flex justify-between items-start pointer-events-auto">
@@ -84,12 +133,14 @@
 
       <!-- Top Nav Bar -->
       <nav class="bg-surface/80 backdrop-blur-md flex justify-between items-center
-                  px-gutter py-2 rounded-DEFAULT border-b border-outline-variant
-                  w-fit gap-8 pointer-events-auto hud-nav-top">
+                  px-gutter py-2 rounded-DEFAULT border-b
+                  w-fit gap-8 pointer-events-auto hud-nav-top"
+           style="border-color: {biomeAccent}33">
 
         <!-- Logo -->
         <div class="font-display-lg text-headline-md tracking-tighter
-                    text-primary italic text-4xl font-extrabold">
+                    italic text-4xl font-extrabold"
+             style="color: {biomeAccent}">
           MAZE HUNTER
         </div>
 
@@ -98,23 +149,35 @@
           <div class="font-label-caps text-label-caps text-on-surface-variant/60 tracking-widest">
             PHASE
           </div>
-          <div class="font-data-lg text-primary text-xl tracking-wider
-                      drop-shadow-[0_0_8px_rgba(78,222,163,0.6)]">
+          <div class="font-data-lg text-xl tracking-wider"
+               style="color: {biomeAccent}">
             ROUND {padRound(currentRound)}
           </div>
+        </div>
+
+        <!-- Biome badge -->
+        <div class="flex flex-col items-start gap-0.5 ml-2 pl-4 border-l border-outline-variant">
+          <span class="font-label-caps text-[8px] text-on-surface-variant/50 tracking-widest">SECTOR</span>
+          <span class="font-label-caps text-[10px] font-bold tracking-wider" style="color:{biomeAccent}">
+            {biomeName}
+          </span>
+          {#if biomeGimmick}
+            <span class="font-label-caps text-[8px] tracking-widest" style="color:{biomeAccent}88">
+              {biomeGimmick}
+            </span>
+          {/if}
         </div>
 
         <!-- Action icons -->
         <div class="flex gap-4 items-center">
           <button
-            class="material-symbols-outlined text-on-surface-variant hover:text-primary
-                   cursor-pointer transition-colors bg-transparent border-none p-0"
+            class="material-symbols-outlined text-on-surface-variant cursor-pointer transition-colors bg-transparent border-none p-0"
+            style="--tw-text-opacity:1"
             aria-label="Settings"
             onclick={() => {}}
           >settings</button>
           <button
-            class="material-symbols-outlined text-on-surface-variant hover:text-primary
-                   cursor-pointer transition-colors bg-transparent border-none p-0"
+            class="material-symbols-outlined text-on-surface-variant cursor-pointer transition-colors bg-transparent border-none p-0"
             aria-label="Pause game"
             onclick={onPause}
           >power_settings_new</button>
@@ -122,16 +185,17 @@
       </nav>
 
       <!-- ── OPERATOR STATUS — Lives Widget ── -->
-      <div class="glass-panel border border-primary/30 px-4 py-2 flex flex-col gap-1 w-fit rounded-lg">
+      <div class="glass-panel px-4 py-2 flex flex-col gap-1 w-fit rounded-lg"
+           style="border: 1px solid {biomeAccent}33">
         <div class="font-label-caps text-label-caps text-on-surface-variant/60 tracking-widest text-[10px]">
           OPERATOR STATUS
         </div>
         <div class="flex items-center gap-2">
           {#each Array(3) as _, i}
             {#if i < currentLives}
-              <!-- Active life: glowing green block -->
-              <div class="w-5 h-5 rounded-sm bg-primary shadow-[0_0_8px_var(--color-primary)]
-                          border border-primary/60 transition-all duration-300">
+              <!-- Active life: glowing biome-colored block -->
+              <div class="w-5 h-5 rounded-sm transition-all duration-300"
+                   style="background:{biomeAccent}; border:1px solid {biomeAccent}99; box-shadow:0 0 8px {biomeAccent}">
               </div>
             {:else}
               <!-- Lost life: dim block -->
@@ -144,10 +208,45 @@
           </span>
         </div>
       </div>
+
+      <!-- Stealth indicator -->
+      {#if inStealth}
+        <div class="glass-panel px-3 py-1.5 rounded flex items-center gap-2 animate-pulse"
+             style="border:1px solid {biomeAccent}66">
+          <span class="w-2 h-2 rounded-full" style="background:{biomeAccent}"></span>
+          <span class="font-label-caps text-[9px] tracking-widest" style="color:{biomeAccent}">STEALTH ACTIVE</span>
+        </div>
+      {/if}
+
+      <!-- Sensor Jam indicator (Data Jungle AoE) -->
+      {#if isSensorJammed}
+        <div class="glass-panel px-3 py-1.5 rounded flex items-center gap-2 animate-pulse"
+             style="border:1px solid #39ff1466; background:rgba(10,40,20,0.75)">
+          <span class="w-2 h-2 rounded-full" style="background:#39ff14; box-shadow:0 0 6px #39ff14"></span>
+          <span class="font-label-caps text-[9px] tracking-widest" style="color:#39ff14">SENSOR JAM {sensorJamSec}s</span>
+        </div>
+      {/if}
     </div>
 
-    <!-- Right column: Power-up badges -->
-    <div class="flex flex-col items-end gap-4 hud-cluster-right">
+    <!-- Right column: Power-up badges + AoE warnings -->
+    <div class="flex flex-col items-end gap-2 hud-cluster-right">
+      <!-- AoE Warning badges -->
+      {#each aoeWarning as ev}
+        {@const secLeft = Math.ceil(ev.warningMs / 1000)}
+        {@const urgentPct = 1 - ev.warningMs / 3000}
+        <div class="glass-panel px-3 py-2 rounded-lg flex items-center gap-2"
+             style="border:1px solid {biomeAccent}99;
+                    box-shadow: 0 0 12px {biomeAccent}55;
+                    background: rgba(0,0,0,0.75);">
+          <span class="font-label-caps text-[9px] tracking-widest" style="color:{biomeAccent}">⚡ AOE INCOMING</span>
+          <!-- Shrinking timer bar -->
+          <div style="width:48px; height:4px; background:rgba(255,255,255,0.15); border-radius:2px; overflow:hidden">
+            <div style="width:{(1 - urgentPct) * 100}%; height:100%; background:{biomeAccent}; border-radius:2px;
+                        transition: width 0.1s linear;"></div>
+          </div>
+          <span class="font-data-sm text-[11px] font-bold" style="color:{biomeAccent}">{secLeft}s</span>
+        </div>
+      {/each}
       {#if isCrystalActive}
         <div class="glass-panel border border-primary/30 p-3 w-48 flex flex-col gap-2
                     rounded-lg animate-pulse">
@@ -287,6 +386,22 @@
     pointer-events: none;
   }
 
+  /* ── Sensor Jam vignette (Data Jungle AoE) ────────────────────── */
+  .sensor-jam-vignette {
+    box-shadow: inset 0 0 100px rgba(57, 255, 20, 0.45),
+                inset 0 0 20px  rgba(57, 255, 20, 0.7);
+    border: 2px solid rgba(57, 255, 20, 0.25);
+    mix-blend-mode: screen;
+    pointer-events: none;
+    animation: sensor-jam-flicker 0.15s infinite;
+  }
+  @keyframes sensor-jam-flicker {
+    0%  { opacity: 1.0; }
+    40% { opacity: 0.85; }
+    70% { opacity: 0.95; }
+    100%{ opacity: 1.0; }
+  }
+
   /* ── Freeze Digital Glitch Vignette ──────────────────────────────────── */
   .freeze-vignette {
     box-shadow: inset 0 0 120px rgba(34, 211, 238, 0.4),
@@ -336,14 +451,13 @@
     transform-style: preserve-3d;
     transform: rotateY(12deg) rotateX(5deg);
     transform-origin: left center;
-    /* Neon cyan drop-shadow — simulates light emitting from a floating panel */
-    filter: drop-shadow(-4px 6px 18px rgba(78, 222, 163, 0.35))
-            drop-shadow(0px 0px 6px rgba(78, 222, 163, 0.15));
+    filter: drop-shadow(-4px 6px 18px rgba(var(--biome-accent-rgb, 78,222,163), 0.35))
+            drop-shadow(0px 0px 6px rgba(var(--biome-accent-rgb, 78,222,163), 0.15));
     transition: filter 0.3s ease;
   }
   .hud-cluster-left:hover {
-    filter: drop-shadow(-4px 6px 24px rgba(78, 222, 163, 0.55))
-            drop-shadow(0px 0px 10px rgba(78, 222, 163, 0.25));
+    filter: drop-shadow(-4px 6px 24px rgba(var(--biome-accent-rgb, 78,222,163), 0.55))
+            drop-shadow(0px 0px 10px rgba(var(--biome-accent-rgb, 78,222,163), 0.25));
   }
 
   /* 3. RIGHT clusters — mirror of left (negative rotateY) */
@@ -351,13 +465,13 @@
     transform-style: preserve-3d;
     transform: rotateY(-12deg) rotateX(5deg);
     transform-origin: right center;
-    filter: drop-shadow(4px 6px 18px rgba(78, 222, 163, 0.35))
-            drop-shadow(0px 0px 6px rgba(78, 222, 163, 0.15));
+    filter: drop-shadow(4px 6px 18px rgba(var(--biome-accent-rgb, 78,222,163), 0.35))
+            drop-shadow(0px 0px 6px rgba(var(--biome-accent-rgb, 78,222,163), 0.15));
     transition: filter 0.3s ease;
   }
   .hud-cluster-right:hover {
-    filter: drop-shadow(4px 6px 24px rgba(78, 222, 163, 0.55))
-            drop-shadow(0px 0px 10px rgba(78, 222, 163, 0.25));
+    filter: drop-shadow(4px 6px 24px rgba(var(--biome-accent-rgb, 78,222,163), 0.55))
+            drop-shadow(0px 0px 10px rgba(var(--biome-accent-rgb, 78,222,163), 0.25));
   }
 
   /* 4. TOP nav — tilt backward along X axis (top edge recedes from viewer) */
@@ -365,8 +479,8 @@
     transform-style: preserve-3d;
     transform: rotateX(-8deg);
     transform-origin: center top;
-    filter: drop-shadow(0px 8px 20px rgba(78, 222, 163, 0.4))
-            drop-shadow(0px 0px 4px rgba(78, 222, 163, 0.2));
+    filter: drop-shadow(0px 8px 20px rgba(var(--biome-accent-rgb, 78,222,163), 0.4))
+            drop-shadow(0px 0px 4px rgba(var(--biome-accent-rgb, 78,222,163), 0.2));
   }
 
   /* 5. Inventory cards — translateZ lift on hover ("pop toward viewer") */

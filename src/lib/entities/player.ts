@@ -35,6 +35,7 @@ export function createPlayer(startPos: Pos, initialBombs = 3): PlayerState {
     freezeTimer: 0,
     mudBlocked: false,  // MUD slow toggle — alternates each move attempt on mud
     isOnLadder: false,
+    sensorJamTimer: 0,
   };
 }
 
@@ -70,12 +71,25 @@ export function updatePlayer(player: PlayerState, deltaMs: number): PlayerState 
   if (updated.powerUpTimer > 0) {
     updated.powerUpTimer = Math.max(0, updated.powerUpTimer - deltaMs);
     if (updated.powerUpTimer === 0) {
-      updated.fogRadius = DEFAULT_FOG_RADIUS;
+      // Restore default fog only if sensor jam isn't still running
+      if (updated.sensorJamTimer <= 0) updated.fogRadius = DEFAULT_FOG_RADIUS;
     }
   }
 
   if (updated.freezeTimer > 0) {
     updated.freezeTimer = Math.max(0, updated.freezeTimer - deltaMs);
+  }
+
+  // ── Sensor Jam (Data Jungle AoE) — shrinks fog to radius 1 ────────────
+  if (updated.sensorJamTimer > 0) {
+    updated.sensorJamTimer = Math.max(0, updated.sensorJamTimer - deltaMs);
+    if (updated.sensorJamTimer > 0) {
+      // Keep fog crushed while jamming (override crystal radius too)
+      updated.fogRadius = 1;
+    } else {
+      // Restore appropriate radius on expiry
+      updated.fogRadius = updated.powerUpTimer > 0 ? 6 : DEFAULT_FOG_RADIUS;
+    }
   }
 
   return updated;

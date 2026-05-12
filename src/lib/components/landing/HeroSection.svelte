@@ -1,20 +1,70 @@
-<!-- HeroSection.svelte — Full-screen hero with maze background -->
+<!-- HeroSection.svelte — Full-screen hero with Cyberpunk Cockpit start modal -->
 <script lang="ts">
+  import { sessionConfig } from '$lib/stores/session-config.js';
+  import type { BiomeId } from '$lib/core/types.js';
+  import type { Difficulty } from '$lib/core/types.js';
+
   interface Props {
-    onStartGame: (difficulty: 'easy' | 'medium' | 'hard') => void;
+    onStartGame: (difficulty: Difficulty, biome: BiomeId) => void;
   }
   let { onStartGame }: Props = $props();
 
-  /** Controls whether the difficulty picker is visible */
-  let showDifficultyModal = $state(false);
+  /** Controls whether the mission config modal is open */
+  let showModal = $state(false);
+
+  /** Currently selected values in the modal */
+  let selectedDifficulty = $state<Difficulty>('normal');
+  let selectedBiome      = $state<BiomeId>('data_jungle');
 
   function scrollToAI() {
     document.getElementById('ai-archetypes')?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  function pickDifficulty(level: 'easy' | 'medium' | 'hard') {
-    showDifficultyModal = false;
-    onStartGame(level);
+  function confirmMission() {
+    sessionConfig.set({ difficulty: selectedDifficulty, biome: selectedBiome });
+    showModal = false;
+    onStartGame(selectedDifficulty, selectedBiome);
+  }
+
+  // ── Biome definitions for the selector ────────────────────────────────────
+  const biomes: { id: Exclude<BiomeId,'shuffle'>; code: string; label: string; desc: string; color: string; gimmick: string }[] = [
+    {
+      id:      'data_jungle',
+      code:    '[01]',
+      label:   'DATA JUNGLE',
+      desc:    'Stealth Nodes hide you from enemy sensors.',
+      color:   '#4edea3',
+      gimmick: 'STEALTH NODES',
+    },
+    {
+      id:      'cooling_sea',
+      code:    '[02]',
+      label:   'COOLING SEA',
+      desc:    'Data Streams multiply or halve movement speed.',
+      color:   '#00ffff',
+      gimmick: 'DATA STREAMS',
+    },
+    {
+      id:      'lava_core',
+      code:    '[03]',
+      label:   'LAVA CORE',
+      desc:    'Volatile Sectors explode every 5 s — stay clear.',
+      color:   '#ff4500',
+      gimmick: 'VOLATILE SECTORS',
+    },
+  ];
+
+  const shuffle = { id: 'shuffle' as BiomeId, code: '[04]', label: 'SHUFFLE PROTOCOL', desc: 'Random biome every round.', color: '#b82ff7', gimmick: 'RANDOMISED' };
+
+  const difficulties: { id: Difficulty; label: string; sub: string; color: string }[] = [
+    { id: 'easy',   label: 'EASY',   sub: 'Recruit speed · Slow growth',   color: '#4edea3' },
+    { id: 'normal', label: 'MEDIUM', sub: 'Standard speed · Normal growth', color: '#ffb95f' },
+    { id: 'hard',   label: 'HARD',   sub: 'Elite speed · Rapid escalation', color: '#ff4757' },
+  ];
+
+  function activeBiomeColor() {
+    if (selectedBiome === 'shuffle') return shuffle.color;
+    return biomes.find(b => b.id === selectedBiome)?.color ?? '#4edea3';
   }
 </script>
 
@@ -50,66 +100,380 @@
     </p>
 
     <!-- CTA buttons -->
-    {#if !showDifficultyModal}
-      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-        <!-- START MISSION: opens difficulty picker -->
-        <button
-          id="hero-start-btn"
-          onclick={() => (showDifficultyModal = true)}
-          class="group relative px-10 py-4 bg-primary text-on-primary font-bold uppercase tracking-widest text-sm overflow-hidden transition-all hover:bg-primary-container"
-        >
-          <span class="relative z-10">START MISSION</span>
-          <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
-        </button>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+      <button
+        id="hero-start-btn"
+        onclick={() => (showModal = true)}
+        class="group relative px-10 py-4 bg-primary text-on-primary font-bold uppercase tracking-widest text-sm overflow-hidden transition-all hover:bg-primary-container"
+      >
+        <span class="relative z-10">START MISSION</span>
+        <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+      </button>
 
-        <!-- VIEW ALGORITHMS: smooth-scrolls to AI section -->
-        <button
-          id="hero-view-algo-btn"
-          onclick={scrollToAI}
-          class="px-10 py-4 border border-outline text-white font-bold uppercase tracking-widest text-sm hover:bg-white/5 transition-colors"
-        >
-          VIEW ALGORITHMS
-        </button>
-      </div>
-    {:else}
-      <!-- Difficulty picker (replaces CTA row) -->
-      <div class="flex flex-col items-center gap-4 animate-fade-in">
-        <p class="font-label-caps text-xs text-primary tracking-widest uppercase mb-2">
-          Select Difficulty Level
-        </p>
-        <div class="flex flex-col sm:flex-row gap-3">
-          <button
-            id="diff-easy-btn"
-            onclick={() => pickDifficulty('easy')}
-            class="px-10 py-4 bg-primary/20 border border-primary/50 text-primary font-bold uppercase tracking-widest text-sm hover:bg-primary hover:text-on-primary transition-all"
-          >
-            EASY
-          </button>
-          <button
-            id="diff-medium-btn"
-            onclick={() => pickDifficulty('medium')}
-            class="px-10 py-4 bg-secondary/20 border border-secondary/50 text-secondary font-bold uppercase tracking-widest text-sm hover:bg-secondary hover:text-on-secondary transition-all"
-          >
-            MEDIUM
-          </button>
-          <button
-            id="diff-hard-btn"
-            onclick={() => pickDifficulty('hard')}
-            class="px-10 py-4 bg-tertiary/20 border border-tertiary/50 text-tertiary font-bold uppercase tracking-widest text-sm hover:bg-tertiary hover:text-on-tertiary transition-all"
-          >
-            HARD
-          </button>
-        </div>
-        <button
-          onclick={() => (showDifficultyModal = false)}
-          class="font-label-caps text-[10px] text-outline uppercase tracking-widest hover:text-white transition-colors mt-1"
-        >
-          ← CANCEL
-        </button>
-      </div>
-    {/if}
+      <button
+        id="hero-view-algo-btn"
+        onclick={scrollToAI}
+        class="px-10 py-4 border border-outline text-white font-bold uppercase tracking-widest text-sm hover:bg-white/5 transition-colors"
+      >
+        VIEW ALGORITHMS
+      </button>
+    </div>
   </div>
 
   <!-- Scanline overlay -->
   <div class="scanline-overlay absolute inset-0 z-40" aria-hidden="true"></div>
 </section>
+
+<!-- ═══════════════════ MISSION CONFIG MODAL ═══════════════════════════════ -->
+{#if showModal}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+    onclick={(e) => { if (e.target === e.currentTarget) showModal = false; }}
+    onkeydown={(e) => e.key === 'Escape' && (showModal = false)}
+    role="dialog"
+    aria-modal="true"
+    aria-label="Mission Configuration"
+    tabindex="-1"
+  >
+    <div class="mission-modal w-full max-w-3xl" style="--accent: {activeBiomeColor()}">
+
+      <!-- ── Header ───────────────────────────────────────────────────── -->
+      <div class="modal-header">
+        <div>
+          <p class="modal-eyebrow">TACTICAL INTERFACE / MISSION SETUP</p>
+          <h3 class="modal-title">CONFIGURE<br /><span class="modal-title-accent">YOUR MISSION</span></h3>
+        </div>
+        <button
+          onclick={() => (showModal = false)}
+          class="modal-close"
+          aria-label="Close"
+        >[ESC] ✕</button>
+      </div>
+
+      <!-- ── Body ─────────────────────────────────────────────────────── -->
+      <div class="modal-body">
+
+        <!-- THREAT LEVEL -->
+        <div class="config-section">
+          <p class="config-label">THREAT LEVEL</p>
+          <div class="threat-grid">
+            {#each difficulties as diff}
+              <button
+                id="threat-{diff.id}"
+                class="threat-card {selectedDifficulty === diff.id ? 'threat-card--active' : ''}"
+                style="--card-color: {diff.color}"
+                onclick={() => (selectedDifficulty = diff.id)}
+              >
+                <span class="threat-name" style="color: {diff.color}">{diff.label}</span>
+                <span class="threat-sub">{diff.sub}</span>
+                {#if selectedDifficulty === diff.id}
+                  <div class="threat-indicator"></div>
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <!-- SECTOR ENVIRONMENT -->
+        <div class="config-section">
+          <p class="config-label">SECTOR ENVIRONMENT</p>
+          <div class="biome-grid">
+            {#each biomes as b}
+              <button
+                id="biome-{b.id}"
+                class="biome-card {selectedBiome === b.id ? 'biome-card--active' : ''}"
+                style="--card-color: {b.color}"
+                onclick={() => (selectedBiome = b.id)}
+              >
+                <div class="biome-top">
+                  <span class="biome-code" style="color:{b.color}">{b.code}</span>
+                  <span class="biome-gimmick" style="border-color:{b.color}40; color:{b.color}">{b.gimmick}</span>
+                </div>
+                <p class="biome-name" style="color:{b.color}">{b.label}</p>
+                <p class="biome-desc">{b.desc}</p>
+                {#if selectedBiome === b.id}
+                  <div class="biome-indicator" style="background:{b.color}"></div>
+                {/if}
+              </button>
+            {/each}
+
+            <!-- SHUFFLE card -->
+            <button
+              id="biome-shuffle"
+              class="biome-card {selectedBiome === 'shuffle' ? 'biome-card--active' : ''}"
+              style="--card-color: {shuffle.color}"
+              onclick={() => (selectedBiome = 'shuffle')}
+            >
+              <div class="biome-top">
+                <span class="biome-code" style="color:{shuffle.color}">{shuffle.code}</span>
+                <span class="biome-gimmick" style="border-color:{shuffle.color}40; color:{shuffle.color}">{shuffle.gimmick}</span>
+              </div>
+              <p class="biome-name" style="color:{shuffle.color}">{shuffle.label}</p>
+              <p class="biome-desc">{shuffle.desc}</p>
+              {#if selectedBiome === 'shuffle'}
+                <div class="biome-indicator" style="background:{shuffle.color}"></div>
+              {/if}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Footer ───────────────────────────────────────────────────── -->
+      <div class="modal-footer">
+        <button onclick={() => (showModal = false)} class="modal-cancel">← ABORT</button>
+        <button id="confirm-mission-btn" onclick={confirmMission} class="modal-confirm" style="background: var(--accent)">
+          DEPLOY MISSION
+          <span class="modal-confirm-arrow">→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<style>
+  /* ── Modal shell ──────────────────────────────────────────────────────── */
+  .mission-modal {
+    background: rgba(8, 8, 14, 0.97);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top: 2px solid var(--accent, #4edea3);
+    box-shadow:
+      0 0 60px rgba(0,0,0,0.9),
+      0 0 30px color-mix(in srgb, var(--accent, #4edea3) 20%, transparent);
+    animation: modal-in 0.25s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.94) translateY(12px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);    }
+  }
+
+  /* ── Header ───────────────────────────────────────────────────────────── */
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .modal-eyebrow {
+    font-family: 'Outfit', sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+  .modal-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .modal-title-accent { color: var(--accent, #4edea3); }
+  .modal-close {
+    font-family: 'Outfit', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: #fff; }
+
+  /* ── Body ─────────────────────────────────────────────────────────────── */
+  .modal-body {
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .config-section {}
+  .config-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin: 0 0 12px;
+  }
+
+  /* ── THREAT cards ─────────────────────────────────────────────────────── */
+  .threat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .threat-card {
+    position: relative;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 16px 14px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color 0.2s, background 0.2s;
+    overflow: hidden;
+  }
+  .threat-card:hover {
+    border-color: color-mix(in srgb, var(--card-color) 50%, transparent);
+    background: color-mix(in srgb, var(--card-color) 8%, transparent);
+  }
+  .threat-card--active {
+    border-color: var(--card-color) !important;
+    background: color-mix(in srgb, var(--card-color) 12%, transparent) !important;
+  }
+  .threat-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .threat-sub {
+    font-family: 'Outfit', sans-serif;
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .threat-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--card-color);
+  }
+
+  /* ── BIOME cards ──────────────────────────────────────────────────────── */
+  .biome-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  @media (min-width: 600px) {
+    .biome-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  .biome-card {
+    position: relative;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 14px 12px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: border-color 0.2s, background 0.2s;
+    overflow: hidden;
+  }
+  .biome-card:hover {
+    border-color: color-mix(in srgb, var(--card-color) 50%, transparent);
+    background: color-mix(in srgb, var(--card-color) 8%, transparent);
+  }
+  .biome-card--active {
+    border-color: var(--card-color) !important;
+    background: color-mix(in srgb, var(--card-color) 12%, transparent) !important;
+  }
+  .biome-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .biome-code {
+    font-family: 'Outfit', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  .biome-gimmick {
+    font-family: 'Outfit', sans-serif;
+    font-size: 7px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1px solid;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+  .biome-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0;
+    line-height: 1.2;
+  }
+  .biome-desc {
+    font-family: 'Outfit', sans-serif;
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    margin: 0;
+    line-height: 1.4;
+  }
+  .biome-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+  }
+
+  /* ── Footer ───────────────────────────────────────────────────────────── */
+  .modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .modal-cancel {
+    font-family: 'Outfit', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 0;
+  }
+  .modal-cancel:hover { color: #fff; }
+  .modal-confirm {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    border: none;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #000;
+    cursor: pointer;
+    transition: filter 0.2s, transform 0.15s;
+  }
+  .modal-confirm:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .modal-confirm-arrow {
+    font-size: 16px;
+    transition: transform 0.2s;
+  }
+  .modal-confirm:hover .modal-confirm-arrow { transform: translateX(4px); }
+</style>

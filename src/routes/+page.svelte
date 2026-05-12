@@ -2,6 +2,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { sessionConfig } from '$lib/stores/session-config.js';
+  import type { BiomeId, Difficulty } from '$lib/core/types.js';
 
   import LandingHeader   from '$lib/components/landing/LandingHeader.svelte';
   import HeroSection     from '$lib/components/landing/HeroSection.svelte';
@@ -16,8 +18,9 @@
     hasSave = !!localStorage.getItem('mazehunter_save');
   });
 
-  function startGame(difficulty: 'easy' | 'medium' | 'hard' = 'medium') {
-    goto(`/game?difficulty=${difficulty}`);
+  function startGame(difficulty: Difficulty, biome: BiomeId) {
+    sessionConfig.set({ difficulty, biome });
+    goto('/game');
   }
 
   function continueGame() {

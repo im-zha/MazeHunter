@@ -9,6 +9,7 @@ import {
   EnemyTrait,
   GamePhase,
   TimedEventType,
+  type BiomeId,
   type GameState,
   type Pos,
 } from '../core/types.js';
@@ -41,11 +42,18 @@ import {
   buildTimedEvents,
   applyTimedEvent,
 } from './timed-events.js';
+import {
+  tickAoeEvents,
+  AOE_SPAWN_INTERVAL_MS,
+} from './event-manager.js';
 import { isWallSafe } from '../algorithms/dsu.js';
 import { gameState } from '../stores/game-state.js';
 import { debugMode, toggleDebug } from '../stores/debug-store.js';
 import { settings } from '../stores/settings-store.js';
+import { sessionConfig } from '../stores/session-config.js';
+import { resolveTheme } from '../core/map-themes.js';
 import type { Settings } from '../core/types.js';
+import type { SessionConfig } from '../stores/session-config.js';
 
 const TARGET_FPS   = 60;
 const FIXED_STEP_MS = 1000 / TARGET_FPS;
@@ -68,6 +76,7 @@ export class GameLoop {
 
   private _state!: GameState;
   private _currentSettings!: Settings;
+  private _currentSessionConfig!: SessionConfig;
   private _exitPos!: Pos;
   private _waveTimeMs = 0;
   private _pathInvalidFlag = false;
@@ -75,6 +84,16 @@ export class GameLoop {
 
   /** Remaining ms for round intro screen. */
   private _introTimer = 0;
+
+  /** Volatile: ms since last explosion. */
+  private _volatileTimer = 0;
+  /** Interval between Volatile explosions (ms). */
+  private static readonly VOLATILE_INTERVAL = 5000;
+
+  /** Melted Slag (Lava Core MUD): cycle timer (ms). */
+  private _slagTimer = 0;
+  private static readonly SLAG_INTERVAL = 5000;
+  private static readonly SLAG_ERUPT_MS = 1000; // last 1000 ms = eruption
 
   constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
@@ -84,6 +103,10 @@ export class GameLoop {
     settings.subscribe(s => {
       this._currentSettings = s;
       this._renderer.setTileSize(s.tileSize);
+    });
+
+    sessionConfig.subscribe(sc => {
+      this._currentSessionConfig = sc;
     });
 
     debugMode.subscribe(d => {
@@ -230,6 +253,7 @@ export class GameLoop {
     this._updateWaveTimer(dt);
     this._processTimedEvents();
     this._tickEventLabel(dt);
+    this._updateBiomeGimmicks(dt);
     this._pushState();
   }
 
@@ -286,7 +310,38 @@ export class GameLoop {
       this._pathInvalidFlag = true;
     }
 
-    this._state = { ...this._state, player: newPlayer, grid: newGrid };
+    // ── CONVEYOR effect (Cooling Sea) ─────────────────────────────────────
+    // Check the DESTINATION cell of this move.
+    const destCell = grid[newPlayer.pos.row]?.[newPlayer.pos.col];
+    let finalPlayer = newPlayer;
+    if (
+      destCell === CellType.CONVEYOR_UP   ||
+      destCell === CellType.CONVEYOR_DOWN ||
+      destCell === CellType.CONVEYOR_LEFT ||
+      destCell === CellType.CONVEYOR_RIGHT
+    ) {
+      const conveyorDir =
+        destCell === CellType.CONVEYOR_UP    ? Direction.UP   :
+        destCell === CellType.CONVEYOR_DOWN  ? Direction.DOWN :
+        destCell === CellType.CONVEYOR_LEFT  ? Direction.LEFT : Direction.RIGHT;
+
+      if (conveyorDir === dir) {
+        // Moving WITH the stream → bonus move in same direction immediately
+        const bonusPlayer = movePlayer(finalPlayer, dir, newGrid, this._state.ladders);
+        if (bonusPlayer) finalPlayer = bonusPlayer;
+      } else if (
+        (conveyorDir === Direction.UP    && dir === Direction.DOWN)  ||
+        (conveyorDir === Direction.DOWN  && dir === Direction.UP)    ||
+        (conveyorDir === Direction.LEFT  && dir === Direction.RIGHT) ||
+        (conveyorDir === Direction.RIGHT && dir === Direction.LEFT)
+      ) {
+        // Moving AGAINST the stream → consume one extra move (skip next input)
+        // We simulate this by blocking mudBlocked for one step
+        finalPlayer = { ...finalPlayer, mudBlocked: true };
+      }
+    }
+
+    this._state = { ...this._state, player: finalPlayer, grid: newGrid };
     this._pathInvalidFlag = true;
   }
 
@@ -419,7 +474,8 @@ export class GameLoop {
           this._exitPos,
           this._pathInvalidFlag,
           this._state.ladders,
-          confusedTarget
+          confusedTarget,
+          this._state.playerInStealth
         );
       });
     }
@@ -489,6 +545,133 @@ export class GameLoop {
     // --- Exit ---
     if (posEqual(player.pos, this._exitPos)) {
       this._completeRound();
+    }
+  }
+
+  // --------------- Biome Gimmick Logic ---------------
+
+  private _updateBiomeGimmicks(dt: number) {
+    const { currentBiome, grid, player } = this._state;
+
+    // ── STEALTH (Data Jungle) ──────────────────────────────────────────
+    // MUD tiles become "Stealth Vines" — same 70% vision reduction as STEALTH_NODE
+    if (currentBiome === 'data_jungle') {
+      const cell = grid[player.pos.row]?.[player.pos.col];
+      const inStealth = cell === CellType.STEALTH_NODE || cell === CellType.MUD;
+      if (inStealth !== this._state.playerInStealth) {
+        this._state = { ...this._state, playerInStealth: inStealth };
+        this._pathInvalidFlag = true;
+      }
+    }
+
+    // ── CONVEYOR (Cooling Sea) ─────────────────────────────────────────
+    // Handled inside _tryMove via speed modifier. Nothing to tick here.
+
+    // ── VOLATILE SECTORS (Lava Core) ──────────────────────────────────
+    if (currentBiome === 'lava_core') {
+      this._volatileTimer += dt;
+      if (this._volatileTimer >= GameLoop.VOLATILE_INTERVAL) {
+        this._volatileTimer -= GameLoop.VOLATILE_INTERVAL;
+        this._triggerVolatileExplosion();
+      }
+      this._state = { ...this._state, volatileTimer: this._volatileTimer };
+
+      // ── MELTED SLAG (Lava Core MUD — 5 s cycle, last 1 s = eruption) ──
+      this._slagTimer += dt;
+      if (this._slagTimer >= GameLoop.SLAG_INTERVAL) {
+        this._slagTimer -= GameLoop.SLAG_INTERVAL;
+      }
+      const erupting = this._slagTimer >= GameLoop.SLAG_INTERVAL - GameLoop.SLAG_ERUPT_MS;
+      const slagHot  = new Set<string>();
+      if (erupting) {
+        for (let r = 0; r < grid.length; r++) {
+          for (let c = 0; c < grid[0].length; c++) {
+            if (grid[r][c] === CellType.MUD) slagHot.add(`${r},${c}`);
+          }
+        }
+        if (slagHot.has(`${player.pos.row},${player.pos.col}`)) {
+          this._state = { ...this._state, slagTimer: this._slagTimer, slagHot };
+          this._loseLife();
+          return;
+        }
+      }
+      this._state = { ...this._state, slagTimer: this._slagTimer, slagHot };
+    }
+
+    // ── TACTICAL AOE EVENTS (all biomes) ──────────────────────────────
+    this._tickAoeEvents(dt);
+  }
+
+  /** Tick Tactical AoE Events and apply biome-specific detonation side-effects. */
+  private _tickAoeEvents(dt: number) {
+    const { aoeEvents, nextAoeMs, currentBiome, grid, player, enemies } = this._state;
+
+    const result = tickAoeEvents(aoeEvents, nextAoeMs, dt, currentBiome, grid, player, enemies);
+
+    let newPlayer  = player;
+    let newEnemies = enemies;
+    let label      = this._state.lastEventLabel;
+    let labelTimer = this._state.eventLabelTimer;
+
+    for (const det of result.detonations) {
+      newEnemies = det.enemies;
+
+      // Data Jungle — Sensor Jamming
+      if (det.playerSensorJamMs > 0) {
+        newPlayer = { ...newPlayer, sensorJamTimer: det.playerSensorJamMs, fogRadius: 1 };
+      }
+
+      // Cooling Sea — Push + Slide
+      if (det.playerPushedTo) {
+        newPlayer = {
+          ...newPlayer,
+          pos:       det.playerPushedTo,
+          isSliding: det.playerPushedSlide !== null,
+          slideDir:  det.playerPushedSlide,
+        };
+        this._pathInvalidFlag = true;
+      }
+
+      // Lava Core — Damage
+      if (det.playerDamaged) {
+        this._state = { ...this._state, aoeEvents: result.events, nextAoeMs: result.nextAoeMs,
+          player: newPlayer, enemies: newEnemies };
+        this._loseLife();
+        return;
+      }
+    }
+
+    if (result.eventLabel) {
+      label      = result.eventLabel;
+      labelTimer = 3_000;
+    }
+
+    this._state = {
+      ...this._state,
+      aoeEvents:       result.events,
+      nextAoeMs:       result.nextAoeMs,
+      player:          newPlayer,
+      enemies:         newEnemies,
+      lastEventLabel:  label,
+      eventLabelTimer: labelTimer,
+    };
+  }
+
+  /** Detonate all VOLATILE tiles. Kill player if standing on one. */
+  private _triggerVolatileExplosion() {
+    const { grid, player } = this._state;
+    const hot = new Set<string>();
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[0].length; c++) {
+        if (grid[r][c] === CellType.VOLATILE) {
+          hot.add(`${r},${c}`);
+        }
+      }
+    }
+    this._state = { ...this._state, volatileHot: hot, lastEventLabel: '🔥 VOLATILE DETONATION!', eventLabelTimer: 2500 };
+
+    if (hot.has(`${player.pos.row},${player.pos.col}`)) {
+      this._loseLife();
     }
   }
 
@@ -600,6 +783,12 @@ export class GameLoop {
     const s    = this._currentSettings;
     const round = wave;
 
+    // ── Resolve Biome ──────────────────────────────────────────────────
+    const selectedBiome = (this._currentSessionConfig?.biome ?? 'data_jungle') as import('../core/types.js').BiomeId;
+    const themeConfig   = resolveTheme(selectedBiome);
+    const currentBiome  = themeConfig.id;
+    this._volatileTimer = 0;
+
     const baseSize = 15;
     const scaleFactor = Math.floor((round - 1) / 3);
     const MAX_GRID_SIZE = 35;
@@ -615,6 +804,9 @@ export class GameLoop {
       cols,
       round,
     });
+
+    // ── Inject Biome Gimmick Tiles ─────────────────────────────────────
+    this._injectBiomeTiles(grid, currentBiome, themeConfig.gimmickDensity);
 
     this._waveTimeMs      = 0;
     this._pathInvalidFlag = false;
@@ -645,7 +837,8 @@ export class GameLoop {
     const player  = createPlayer(validStart, bombs);
     player.isOnLadder = false;
 
-    const enemies = buildWave(wave, grid, validStart, s?.difficulty ?? 'normal');
+    const difficulty = this._currentSessionConfig?.difficulty ?? s?.difficulty ?? 'normal';
+    const enemies = buildWave(wave, grid, validStart, difficulty);
     const timedEvents     = buildTimedEvents(round);
 
     this._state = {
@@ -665,12 +858,56 @@ export class GameLoop {
       lastEventLabel: '',
       eventLabelTimer: 0,
       bridgeOccupancy: {},
+      // Biome
+      selectedBiome,
+      currentBiome,
+      volatileTimer: 0,
+      volatileHot: new Set<string>(),
+      playerInStealth: false,
+      // AoE Events — first event spawns after 10 s
+      aoeEvents: [],
+      nextAoeMs: AOE_SPAWN_INTERVAL_MS,
+      // Melted Slag
+      slagTimer: 0,
+      slagHot: new Set<string>(),
     };
 
     this._canvas.width  = window.innerWidth;
     this._canvas.height = window.innerHeight;
 
     this._pushState();
+  }
+
+  /** Sprinkle biome gimmick tiles across floor cells. */
+  private _injectBiomeTiles(
+    grid: import('../core/types.js').Grid,
+    biome: Exclude<import('../core/types.js').BiomeId, 'shuffle'>,
+    density: number
+  ) {
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const floorCells: Pos[] = [];
+    for (let r = 1; r < rows - 1; r++) {
+      for (let c = 1; c < cols - 1; c++) {
+        if (grid[r][c] === CellType.FLOOR) floorCells.push({ row: r, col: c });
+      }
+    }
+    const count = Math.floor(floorCells.length * density);
+    // Fisher-Yates shuffle slice
+    for (let i = floorCells.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [floorCells[i], floorCells[j]] = [floorCells[j], floorCells[i]];
+    }
+    const targets = floorCells.slice(0, count);
+
+    if (biome === 'data_jungle') {
+      for (const p of targets) grid[p.row][p.col] = CellType.STEALTH_NODE;
+    } else if (biome === 'cooling_sea') {
+      const dirs = [CellType.CONVEYOR_UP, CellType.CONVEYOR_DOWN, CellType.CONVEYOR_LEFT, CellType.CONVEYOR_RIGHT];
+      for (const p of targets) grid[p.row][p.col] = dirs[Math.floor(Math.random() * dirs.length)];
+    } else if (biome === 'lava_core') {
+      for (const p of targets) grid[p.row][p.col] = CellType.VOLATILE;
+    }
   }
 
   // --------------- Push state to store ---------------

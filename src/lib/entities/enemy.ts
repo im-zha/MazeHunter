@@ -167,7 +167,8 @@ export function updateEnemy(
   exitPos: Pos,
   pathInvalid: boolean,
   ladders: LadderObject[] = [],
-  confusedTarget?: Pos
+  confusedTarget?: Pos,
+  playerInStealth = false
 ): EnemyState {
   let updated = { ...enemy };
 
@@ -191,7 +192,23 @@ export function updateEnemy(
   } else if (updated.mode === EnemyMode.FLEE) {
     target = maxDistanceBfs(grid, playerPos, updated.pos, ladders);
   } else {
-    target = playerPos;
+    // ── STEALTH NODE: reduce detection for precision-tracking enemies ──────
+    // Hunter/Boss lose the player entirely; others just fail to recalc path.
+    if (playerInStealth) {
+      const isTrackingEnemy =
+        updated.trait === EnemyTrait.HUNTER ||
+        updated.trait === EnemyTrait.BOSS   ||
+        updated.algoType === AlgoType.ASTAR;
+      if (isTrackingEnemy) {
+        // Redirect to exit (acts like player is invisible)
+        target = exitPos;
+      } else {
+        // Non-precision enemies: walk toward last known direction (exit as proxy)
+        target = confusedTarget ?? exitPos;
+      }
+    } else {
+      target = playerPos;
+    }
   }
 
   // Hunter trait: always force recalc (hyper-pursuit)

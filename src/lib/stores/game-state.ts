@@ -35,6 +35,13 @@ function createInitialGameState(): GameState {
     fogEnabled: DEFAULT_SETTINGS.fogEnabled,
     debugMode: false,
     bridgeOccupancy: {},
+
+    // Biome defaults
+    selectedBiome: 'data_jungle',
+    currentBiome:  'data_jungle',
+    volatileTimer: 0,
+    volatileHot:   new Set<string>(),
+    playerInStealth: false,
   };
 }
 

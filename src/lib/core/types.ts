@@ -27,6 +27,20 @@ export enum CellType {
     BRIDGE = 9,
   /** Crack tile: collapses after a set number of uses. */
     CRACK = 12,
+
+  // ── Biome Gimmick Cells ──────────────────────────────────────────────
+  /** DATA JUNGLE — Stealth Node: reduces enemy detection range by 70% when player is inside. */
+    STEALTH_NODE = 20,
+  /** COOLING SEA — Conveyor going UP: doubles speed if moving up, halves if moving down. */
+    CONVEYOR_UP = 21,
+  /** COOLING SEA — Conveyor going DOWN. */
+    CONVEYOR_DOWN = 22,
+  /** COOLING SEA — Conveyor going LEFT. */
+    CONVEYOR_LEFT = 23,
+  /** COOLING SEA — Conveyor going RIGHT. */
+    CONVEYOR_RIGHT = 24,
+  /** LAVA CORE — Volatile sector: explodes every 5 s, kills player if standing on it. */
+    VOLATILE = 25,
 }
 
 /** Enum đại diện cho AlgoType. */
@@ -203,6 +217,8 @@ export interface PlayerState {
   mudBlocked: boolean;
   /** Đang di chuyển trên thang (điều khiển thủ công) */
   isOnLadder: boolean;
+  /** Sensor Jam timer (ms) from Data Jungle AoE — fogRadius shrinks to 1 while active. */
+  sensorJamTimer: number;
 }
 
 /** Interface đại diện cho EnemyState. */
@@ -233,6 +249,29 @@ export interface EnemyState {
   lastAlgoResult: AlgoResult | null;
   /** Whether this enemy is currently on a BRIDGE (for congestion logic). */
   onBridge: boolean;
+}
+
+// --------------- Biome System ---------------
+
+/** Định danh Biome. */
+export type BiomeId = 'data_jungle' | 'cooling_sea' | 'lava_core' | 'shuffle';
+
+// --------------- AoE Events ---------------
+
+/**
+ * A Tactical AoE Event — spawns every 10 s at a random floor cell.
+ * 3 s warning (visual), then detonates in a 3×3 zone.
+ */
+export interface AoeEvent {
+  id: string;
+  /** Center tile of the 3×3 blast zone. */
+  center: Pos;
+  /** ms remaining in warning phase (starts at 3000, detonates when ≤ 0). */
+  warningMs: number;
+  /** Whether this event has already detonated (kept briefly for flash VFX). */
+  detonated: boolean;
+  /** How long the detonation flash remains visible (ms). */
+  flashMs: number;
 }
 
 // --------------- Game State ---------------
@@ -274,6 +313,30 @@ export interface GameState {
    * Mỗi thang là một overlay floating entity, không chiếm ô grid.
    */
   ladders: LadderObject[];
+
+  // ── Biome ────────────────────────────────────────────────────────────
+  /** Biome được chọn bởi người chơi (hoặc 'shuffle'). */
+  selectedBiome: BiomeId;
+  /** Biome đang được áp dụng trong round hiện tại (đã giải ngẫu nhiên nếu shuffle). */
+  currentBiome: Exclude<BiomeId, 'shuffle'>;
+  /** Timer tích lũy cho cơ chế Volatile (ms). Mỗi 5000ms gây nổ. */
+  volatileTimer: number;
+  /** Tập hợp các ô Volatile đang "nóng" (key = "row,col"). */
+  volatileHot: Set<string>;
+  /** Player đang đứng trong STEALTH_NODE hoặc Stealth Vines (MUD trong data_jungle)? */
+  playerInStealth: boolean;
+
+  // ── Tactical AoE Events ──────────────────────────────────────────────
+  /** Active AoE events on the map. */
+  aoeEvents: AoeEvent[];
+  /** ms until next AoE event is spawned. Resets to AOE_SPAWN_INTERVAL after each spawn. */
+  nextAoeMs: number;
+
+  // ── Melted Slag (Lava Core MUD) ─────────────────────────────────────
+  /** Cycle timer for Melted Slag eruption (0–5000 ms). Eruption in last 1000 ms. */
+  slagTimer: number;
+  /** MUD cells that are currently erupting (key = "row,col"). */
+  slagHot: Set<string>;
 }
 
 // --------------- Settings ---------------
