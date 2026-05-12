@@ -110,12 +110,6 @@
     {/if}
   </div>
 
-  <!-- Scroll Indicator -->
-  <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 opacity-50" aria-hidden="true">
-    <span class="font-label-caps text-[10px] uppercase tracking-[0.2em]">Deploying Modules</span>
-    <div class="w-[1px] h-12 bg-gradient-to-b from-primary to-transparent"></div>
-  </div>
-
   <!-- Scanline overlay -->
   <div class="scanline-overlay absolute inset-0 z-40" aria-hidden="true"></div>
 </section>
