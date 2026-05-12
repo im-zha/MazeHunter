@@ -34,11 +34,7 @@ export function createPlayer(startPos: Pos, initialBombs = 3): PlayerState {
     slideDir: null,
     freezeTimer: 0,
     mudBlocked: false,  // MUD slow toggle — alternates each move attempt on mud
-    isClimbing: false,
-    climbTimer: 0,
-    climbDuration: 0,
-    climbStart: null,
-    climbEnd: null,
+    isOnLadder: false,
   };
 }
 
@@ -113,11 +109,27 @@ export function movePlayer(
   const targetCell = grid[newRow][newCol];
   const newPos: Pos = { row: newRow, col: newCol };
 
-  if (!isPlayerPassable(targetCell)) return null;
+  let isOnLadderNode = false;
+  if (player.isOnLadder) {
+    for (const ladder of ladders) {
+      for (const node of ladder.path_nodes) {
+        if (node.row === newRow && node.col === newCol) {
+          isOnLadderNode = true;
+          break;
+        }
+      }
+      if (isOnLadderNode) break;
+    }
+  }
+
+  // If the target is not a floor and we are not traversing it via a ladder, block movement.
+  if (!isPlayerPassable(targetCell) && !isOnLadderNode) return null;
 
   let updated: PlayerState = {
     ...player,
     pos: newPos,
+    // Step off the ladder automatically if the new position isn't a ladder node
+    isOnLadder: player.isOnLadder && isOnLadderNode,
   };
 
   // ---- Mud: 50% speed via alternating block ----

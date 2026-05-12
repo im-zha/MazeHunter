@@ -55,12 +55,12 @@
 </svelte:head>
 
 <div class="game-root">
-  <!-- Canvas (base layer) -->
-  <div class="canvas-wrap">
+  <!-- z-0: Canvas — fills entire viewport, game renderer draws here -->
+  <div class="canvas-layer">
     <GameCanvas bind:this={gameCanvas} />
   </div>
 
-  <!-- HUD (overlay) -->
+  <!-- z-10 + z-20: Scanlines, Vignette & HUD (rendered inside HUD component) -->
   <HUD onPause={() => gameCanvas?.pause()} />
 
   <!-- Algorithm debug panel -->
@@ -117,12 +117,15 @@
     justify-content: center;
   }
 
-  .canvas-wrap {
+  /* Canvas — absolute, fills entire game-root at z-0 */
+  .canvas-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 100%;
-    max-height: 100%;
     overflow: hidden;
   }
 

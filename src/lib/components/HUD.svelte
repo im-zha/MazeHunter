@@ -1,240 +1,404 @@
-<!-- HUD.svelte — In-game heads-up display overlay -->
+<!-- HUD.svelte — In-game heads-up display overlay (redesigned) -->
 <script lang="ts">
   import { gameState } from '$lib/stores/game-state.js';
+  import { goto } from '$app/navigation';
 
   let { onPause }: { onPause: () => void } = $props();
 
-  const HEART = '❤';
-  const BOMB  = '💣';
-
+  // ── Reactive state từ store ──────────────────────────────────────────
   const state = $derived($gameState);
 
-  const powerUpPct = $derived(
-    state.player.powerUpTimer > 0
-      ? (state.player.powerUpTimer / 12000) * 100
-      : 0
-  );
+  /** Round hiện tại */
+  const currentRound = $derived(state.round);
 
+  /** Số lượng bomb còn lại */
+  const bombsCount = $derived(state.player.wallBombs);
+
+  /** Freeze có đang active không */
+  const isFreezeActive = $derived(state.player.freezeTimer > 0);
+
+  /** % thời gian Freeze còn lại (8s = 8000ms max) */
   const freezePct = $derived(
-    state.player.freezeTimer > 0
-      ? (state.player.freezeTimer / 8000) * 100
-      : 0
+    isFreezeActive ? Math.min(100, (state.player.freezeTimer / 8000) * 100) : 0
   );
 
-  const maxBombs = 5;
+  /** Giây Freeze còn lại */
+  const freezeSec = $derived(Math.ceil(state.player.freezeTimer / 1000));
 
-  const roundColor = $derived(
-    state.round === 3 ? '#ff4757' : state.round === 2 ? '#f97316' : '#39ff14'
+  /** Crystal có đang active không */
+  const isCrystalActive = $derived(state.player.powerUpTimer > 0);
+
+  /** % thời gian Crystal còn lại (12s = 12000ms max) */
+  const crystalPct = $derived(
+    isCrystalActive ? Math.min(100, (state.player.powerUpTimer / 12000) * 100) : 0
   );
 
-  const waveLimit = $derived(
-    state.round === 1 ? 90 : state.round === 2 ? 75 : 60
-  );
-  const timeRemainSec = $derived(
-    Math.max(0, waveLimit - Math.floor(state.timeElapsedMs / 1000))
-  );
+  /** Giây Crystal còn lại */
+  const crystalSec = $derived(Math.ceil(state.player.powerUpTimer / 1000));
+
+  /** Số mạng hiện tại */
+  const currentLives = $derived(state.lives);
+
+  /** Event log — lấy từ lastEventLabel của store, bổ sung log mẫu */
+  const systemLogs: { time: string; msg: string; type: 'info' | 'error' | 'crystal' }[] = [
+    { time: '12:43:55', msg: 'SYS_INIT SEC_OK',        type: 'info'    },
+    { time: '12:43:58', msg: 'ALGORITHM: A* PATHING',  type: 'info'    },
+    { time: '12:44:00', msg: 'ENTITY SCANNED.',         type: 'info'    },
+    { time: '12:44:02', msg: 'GHOST AI DETECTED',       type: 'error'   },
+    { time: '12:44:10', msg: 'CRYSTAL ENGAGED',         type: 'crystal' },
+  ];
+
+  /** Pad round number */
+  function padRound(n: number) {
+    return String(n).padStart(2, '0');
+  }
 </script>
 
-<div class="hud pointer-events-none select-none">
-  <!-- Top Bar -->
-  <div class="hud-top">
-    <!-- Score -->
-    <div class="hud-block">
-      <span class="hud-label">SCORE</span>
-      <span class="hud-value score-value">{state.score.toLocaleString()}</span>
+<!--
+  ╔══════════════════════════════════════════════════════╗
+  ║  Layer stack (z-index)                               ║
+  ║  z-0  : <canvas> — game renderer                    ║
+  ║  z-10 : .scanlines / .vignette overlay               ║
+  ║  z-20 : HUD (this component)                         ║
+  ╚══════════════════════════════════════════════════════╝
+-->
+
+<!-- Scanlines & Vignette — pointer-events: none by CSS -->
+<div class="absolute inset-0 z-10 scanlines vignette"></div>
+
+<!-- Freeze Digital Glitch Vignette overlay -->
+{#if isFreezeActive}
+  <div class="absolute inset-0 z-15 pointer-events-none freeze-vignette transition-opacity duration-300"></div>
+{/if}
+
+<!-- ── Main HUD Container ─────────────────────────────────────────────── -->
+<!-- pointer-events-none on the wrapper; children opt-in with pointer-events-auto -->
+<div class="absolute inset-0 z-20 flex flex-col justify-between pointer-events-none p-margin hud-root"
+     class:freeze-theme={isFreezeActive}>
+
+  <!-- ═══════════════════════════════ HEADER ════════════════════════════ -->
+  <div class="flex justify-between items-start pointer-events-auto">
+
+    <!-- Left column: TopNavBar + Lives -->
+    <div class="flex flex-col gap-4 hud-cluster-left">
+
+      <!-- Top Nav Bar -->
+      <nav class="bg-surface/80 backdrop-blur-md flex justify-between items-center
+                  px-gutter py-2 rounded-DEFAULT border-b border-outline-variant
+                  w-fit gap-8 pointer-events-auto hud-nav-top">
+
+        <!-- Logo -->
+        <div class="font-display-lg text-headline-md tracking-tighter
+                    text-primary italic text-4xl font-extrabold">
+          MAZE HUNTER
+        </div>
+
+        <!-- Phase / Round -->
+        <div class="flex items-center gap-3 ml-4 pl-4 border-l border-outline-variant">
+          <div class="font-label-caps text-label-caps text-on-surface-variant/60 tracking-widest">
+            PHASE
+          </div>
+          <div class="font-data-lg text-primary text-xl tracking-wider
+                      drop-shadow-[0_0_8px_rgba(78,222,163,0.6)]">
+            ROUND {padRound(currentRound)}
+          </div>
+        </div>
+
+        <!-- Action icons -->
+        <div class="flex gap-4 items-center">
+          <button
+            class="material-symbols-outlined text-on-surface-variant hover:text-primary
+                   cursor-pointer transition-colors bg-transparent border-none p-0"
+            aria-label="Settings"
+            onclick={() => {}}
+          >settings</button>
+          <button
+            class="material-symbols-outlined text-on-surface-variant hover:text-primary
+                   cursor-pointer transition-colors bg-transparent border-none p-0"
+            aria-label="Pause game"
+            onclick={onPause}
+          >power_settings_new</button>
+        </div>
+      </nav>
+
+      <!-- ── OPERATOR STATUS — Lives Widget ── -->
+      <div class="glass-panel border border-primary/30 px-4 py-2 flex flex-col gap-1 w-fit rounded-lg">
+        <div class="font-label-caps text-label-caps text-on-surface-variant/60 tracking-widest text-[10px]">
+          OPERATOR STATUS
+        </div>
+        <div class="flex items-center gap-2">
+          {#each Array(3) as _, i}
+            {#if i < currentLives}
+              <!-- Active life: glowing green block -->
+              <div class="w-5 h-5 rounded-sm bg-primary shadow-[0_0_8px_theme('colors.primary')]
+                          border border-primary/60 transition-all duration-300">
+              </div>
+            {:else}
+              <!-- Lost life: dim block -->
+              <div class="w-5 h-5 rounded-sm bg-surface-container-highest border border-outline-variant opacity-30">
+              </div>
+            {/if}
+          {/each}
+          <span class="font-data-sm text-on-surface-variant text-[11px] ml-1">
+            {currentLives}/3
+          </span>
+        </div>
+      </div>
     </div>
 
-    <!-- Round badge -->
-    <div class="hud-block hud-center">
-      <span class="hud-label">ROUND</span>
-      <span class="hud-value round-value" style="color:{roundColor};text-shadow:0 0 14px {roundColor}80;">
-        {state.round}
-      </span>
-    </div>
+    <!-- Right column: Power-up badges -->
+    <div class="flex flex-col items-end gap-4 hud-cluster-right">
+      {#if isCrystalActive}
+        <div class="glass-panel border border-primary/30 p-3 w-48 flex flex-col gap-2
+                    rounded-lg animate-pulse">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-sm">diamond</span>
+              <span class="font-label-caps text-[10px] text-primary tracking-widest">
+                CRYSTAL ACTIVE
+              </span>
+            </div>
+            <span class="font-data-sm text-on-surface font-bold text-xs">
+              {crystalSec}s
+            </span>
+          </div>
+          <!-- Progress bar -->
+          <div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+            <div
+              class="bg-primary h-full rounded-full shadow-[0_0_10px_theme('colors.primary')]
+                     transition-[width] duration-100 ease-linear"
+              style="width: {crystalPct}%"
+            ></div>
+          </div>
+        </div>
+      {/if}
 
-    <!-- Lives -->
-    <div class="hud-block hud-right">
-      <span class="hud-label">LIVES</span>
-      <span class="hud-value">
-        {#each Array(state.lives) as _}
-          <span class="heart">{HEART}</span>
-        {/each}
-        {#each Array(Math.max(0, 3 - state.lives)) as _}
-          <span class="heart dead">{HEART}</span>
-        {/each}
-      </span>
-    </div>
-
-    <!-- Pause Button -->
-    <div class="hud-block hud-right-most pointer-events-auto">
-      <button class="icon-btn" aria-label="Pause button" onclick={onPause}>⏸</button>
+      {#if isFreezeActive}
+        <div class="glass-panel border border-primary/30 p-3 w-48 flex flex-col gap-2
+                    rounded-lg animate-pulse">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-sm">ac_unit</span>
+              <span class="font-label-caps text-[10px] text-primary tracking-widest">
+                FREEZE ACTIVE
+              </span>
+            </div>
+            <span class="font-data-sm text-on-surface font-bold text-xs">
+              {freezeSec}s
+            </span>
+          </div>
+          <!-- Progress bar -->
+          <div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+            <div
+              class="bg-primary h-full rounded-full shadow-[0_0_10px_theme('colors.primary')]
+                     transition-[width] duration-100 ease-linear"
+              style="width: {freezePct}%"
+            ></div>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 
-  <!-- Bottom Bar -->
-  <div class="hud-bottom">
-    <!-- Wall Bombs -->
-    <div class="hud-block">
-      <span class="hud-label">WALL BOMBS</span>
-      <span class="hud-value">
-        {#each Array(state.player.wallBombs) as _}
-          <span class="bomb">{BOMB}</span>
-        {/each}
-        {#each Array(Math.max(0, maxBombs - state.player.wallBombs)) as _}
-          <span class="bomb used">{BOMB}</span>
-        {/each}
-      </span>
+  <!-- ═══════════════════════════════ FOOTER ════════════════════════════ -->
+  <div class="flex justify-between items-end pointer-events-auto">
+
+    <!-- Left: Inventory Panels -->
+    <div class="flex gap-4 hud-cluster-left">
+
+      <!-- Wall Bombs -->
+      <div class="glass-panel border border-outline-variant p-3 w-32 flex flex-col gap-2
+                  hover:bg-surface-variant/30 cursor-pointer transition-colors group hud-inventory-card"
+           role="button"
+           tabindex="0"
+           aria-label="Wall Bombs: {bombsCount} remaining">
+        <div class="flex justify-between items-start">
+          <span class="material-symbols-outlined text-primary group-hover:scale-110
+                       transition-transform">bomb</span>
+          <span class="font-data-sm text-data-sm text-on-surface-variant">
+            {bombsCount}/5
+          </span>
+        </div>
+        <div>
+          <div class="font-label-caps text-label-caps text-on-surface">WALL BOMBS</div>
+          <div class="font-data-sm text-data-sm text-on-surface-variant mt-1">[SPACE]</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Power Crystal timer -->
-    {#if powerUpPct > 0}
-      <div class="power-up-bar-wrap">
-        <span class="hud-label crystal-label">⚡ POWER CRYSTAL</span>
-        <div class="power-up-bar">
-          <div class="power-up-fill" style="width: {powerUpPct}%"></div>
-        </div>
+    <!-- Right: System Event Log -->
+    <div class="glass-panel border border-outline-variant w-80 h-48 flex flex-col p-3 hud-cluster-right hud-event-log">
+      <div class="font-label-caps text-label-caps text-on-surface-variant
+                  border-b border-outline-variant pb-2 mb-2
+                  flex justify-between items-center">
+        <span>SYSTEM LOGS</span>
+        <span class="material-symbols-outlined text-[14px]">terminal</span>
       </div>
-    {/if}
 
-    <!-- Freeze Clock timer -->
-    {#if freezePct > 0}
-      <div class="power-up-bar-wrap">
-        <span class="hud-label freeze-label">🕒 FREEZE CLOCK</span>
-        <div class="power-up-bar">
-          <div class="freeze-fill" style="width: {freezePct}%"></div>
-        </div>
+      <div class="flex-1 overflow-y-auto flex flex-col gap-1 font-data-sm text-data-sm">
+        {#each systemLogs as log}
+          {#if log.type === 'error'}
+            <div class="text-error bg-error-container/10 px-1 border-l-2 border-error">
+              <span class="text-error/70">[{log.time}]</span>
+              {log.msg}
+            </div>
+          {:else if log.type === 'crystal'}
+            <div class="text-primary bg-primary/10 px-1 border-l-2 border-primary mt-1">
+              <span class="text-primary/70">[{log.time}]</span>
+              {log.msg}
+            </div>
+          {:else}
+            <div class="text-on-surface-variant">
+              <span class="text-outline">[{log.time}]</span>
+              {log.msg}
+            </div>
+          {/if}
+        {/each}
+
+        <!-- Dynamic last event from game store -->
+        {#if state.lastEventLabel}
+          <div class="text-secondary bg-secondary/10 px-1 border-l-2 border-secondary mt-1">
+            <span class="text-secondary/70">[LIVE]</span>
+            {state.lastEventLabel}
+          </div>
+        {/if}
       </div>
-    {/if}
-
-    <!-- Controls hint -->
-    <div class="hud-block hud-right controls-hint">
-      <span>WASD/Arrows · Space:Wall · E:Ladder · F1:Debug</span>
     </div>
   </div>
 </div>
 
 <style>
-  .hud {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 12px 16px;
-    font-family: 'Outfit', 'Inter', sans-serif;
+  /* ── Scanlines effect ────────────────────────────────────────────────── */
+  .scanlines {
+    background: linear-gradient(
+      to bottom,
+      rgba(255,255,255,0),
+      rgba(255,255,255,0) 50%,
+      rgba(0,0,0,0.2) 50%,
+      rgba(0,0,0,0.2)
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
   }
 
-  .hud-top, .hud-bottom {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6px);
-    border-radius: 12px;
-    padding: 8px 16px;
-    border: 1px solid rgba(255,255,255,0.08);
+  /* ── Vignette effect ─────────────────────────────────────────────────── */
+  .vignette {
+    box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
+    pointer-events: none;
   }
 
-  .hud-block {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 80px;
+  /* ── Freeze Digital Glitch Vignette ──────────────────────────────────── */
+  .freeze-vignette {
+    box-shadow: inset 0 0 120px rgba(34, 211, 238, 0.4),
+                inset 0 0 20px rgba(34, 211, 238, 0.8);
+    border: 2px solid rgba(34, 211, 238, 0.3);
+    mix-blend-mode: screen;
+    pointer-events: none;
   }
 
-  .hud-center { flex: 1; text-align: center; align-items: center; }
-  .hud-right  { margin-left: auto; align-items: flex-end; }
-
-  .hud-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.45);
-    text-transform: uppercase;
+  /* ── Freeze Theme Override ───────────────────────────────────────────── */
+  .freeze-theme {
+    /* Override primary color to cyan-400 (#22d3ee) */
+    --color-primary: #22d3ee;
   }
 
-  .hud-value {
-    font-size: 20px;
-    font-weight: 800;
-    color: #ffffff;
+  /* ── Glass panel ─────────────────────────────────────────────────────── */
+  .glass-panel {
+    background-color: rgba(10, 10, 12, 0.6);
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── Material Symbols icon font ──────────────────────────────────────── */
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined', sans-serif;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-size: 24px;
     line-height: 1;
-    display: flex;
-    align-items: center;
-    gap: 2px;
+    display: inline-block;
+    vertical-align: middle;
+    user-select: none;
   }
 
-  .score-value {
-    color: #39ff14;
-    text-shadow: 0 0 10px rgba(57,255,20,0.5);
+  /* ═══════════════════════════════════════════════════════════════════════
+     3D HOLOGRAM / COCKPIT VISOR — CSS 3D Transforms
+     Perspective is set on .hud-root so all child transforms share the
+     same vanishing point, simulating a curved heads-up display.
+  ═══════════════════════════════════════════════════════════════════════ */
+
+  /* 1. Perspective container — the "cockpit visor" viewport */
+  .hud-root {
+    perspective: 1200px;
+    perspective-origin: 50% 38%; /* Slightly above center = natural eye line */
   }
 
-  .round-value {
-    font-size: 22px;
-    font-weight: 900;
+  /* 2. LEFT clusters — tilt inward from the left edge (positive rotateY) */
+  .hud-cluster-left {
+    transform-style: preserve-3d;
+    transform: rotateY(12deg) rotateX(5deg);
+    transform-origin: left center;
+    /* Neon cyan drop-shadow — simulates light emitting from a floating panel */
+    filter: drop-shadow(-4px 6px 18px rgba(78, 222, 163, 0.35))
+            drop-shadow(0px 0px 6px rgba(78, 222, 163, 0.15));
+    transition: filter 0.3s ease;
+  }
+  .hud-cluster-left:hover {
+    filter: drop-shadow(-4px 6px 24px rgba(78, 222, 163, 0.55))
+            drop-shadow(0px 0px 10px rgba(78, 222, 163, 0.25));
   }
 
-  .hud-right-most { margin-left: 12px; }
-
-  .icon-btn {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
-    transition: all 0.15s ease;
+  /* 3. RIGHT clusters — mirror of left (negative rotateY) */
+  .hud-cluster-right {
+    transform-style: preserve-3d;
+    transform: rotateY(-12deg) rotateX(5deg);
+    transform-origin: right center;
+    filter: drop-shadow(4px 6px 18px rgba(78, 222, 163, 0.35))
+            drop-shadow(0px 0px 6px rgba(78, 222, 163, 0.15));
+    transition: filter 0.3s ease;
   }
-  .icon-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
-  .icon-btn:active { transform: scale(0.95); }
-
-  .heart { font-size: 18px; }
-  .heart.dead { opacity: 0.2; }
-  .bomb  { font-size: 18px; }
-  .bomb.used { opacity: 0.2; filter: grayscale(1); }
-
-  .power-up-bar-wrap {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 0 8px;
+  .hud-cluster-right:hover {
+    filter: drop-shadow(4px 6px 24px rgba(78, 222, 163, 0.55))
+            drop-shadow(0px 0px 10px rgba(78, 222, 163, 0.25));
   }
 
-  .crystal-label { color: #f72585; text-shadow: 0 0 6px rgba(247,37,133,0.7); }
-
-  .power-up-bar {
-    height: 6px;
-    background: rgba(255,255,255,0.12);
-    border-radius: 9999px;
-    overflow: hidden;
+  /* 4. TOP nav — tilt backward along X axis (top edge recedes from viewer) */
+  .hud-nav-top {
+    transform-style: preserve-3d;
+    transform: rotateX(-8deg);
+    transform-origin: center top;
+    filter: drop-shadow(0px 8px 20px rgba(78, 222, 163, 0.4))
+            drop-shadow(0px 0px 4px rgba(78, 222, 163, 0.2));
   }
 
-  .power-up-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #7b2ff7, #f72585);
-    border-radius: 9999px;
-    transition: width 0.1s linear;
-    box-shadow: 0 0 8px rgba(247,37,133,0.7);
+  /* 5. Inventory cards — translateZ lift on hover ("pop toward viewer") */
+  .hud-inventory-card {
+    transform-style: preserve-3d;
+    /* Base: sits slightly recessed in the 3D plane */
+    transform: translateZ(0px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.3s ease,
+                filter 0.3s ease;
+    /* Subtle neon ambient glow at rest */
+    box-shadow: 0 4px 24px rgba(78, 222, 163, 0.12),
+                0 1px 4px rgba(0, 0, 0, 0.6),
+                inset 0 0 0 1px rgba(78, 222, 163, 0.08);
+  }
+  .hud-inventory-card:hover {
+    /* Pop 20px toward the viewer in the 3D scene */
+    transform: translateZ(20px);
+    box-shadow: 0 12px 40px rgba(78, 222, 163, 0.35),
+                0 4px 12px rgba(0, 0, 0, 0.8),
+                inset 0 0 0 1px rgba(78, 222, 163, 0.25);
+    filter: brightness(1.15);
   }
 
-  .freeze-label { color: #00e5ff; text-shadow: 0 0 6px rgba(0,229,255,0.7); }
-
-  .freeze-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #0077ff, #00e5ff);
-    border-radius: 9999px;
-    transition: width 0.1s linear;
-    box-shadow: 0 0 8px rgba(0,229,255,0.7);
+  /* 6. Event log — matching right-cluster floating effect */
+  .hud-event-log {
+    box-shadow: 0 4px 24px rgba(78, 222, 163, 0.12),
+                0 1px 4px rgba(0, 0, 0, 0.6);
+    transition: box-shadow 0.3s ease;
   }
-
-  .controls-hint {
-    font-size: 11px;
-    color: rgba(255,255,255,0.3);
-    white-space: nowrap;
+  .hud-event-log:hover {
+    box-shadow: 0 8px 32px rgba(78, 222, 163, 0.28),
+                0 2px 8px rgba(0, 0, 0, 0.7);
   }
 </style>

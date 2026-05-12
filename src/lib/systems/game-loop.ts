@@ -261,7 +261,6 @@ export class GameLoop {
 
   private _tryMove(dir: Direction) {
     const { player, grid } = this._state;
-    if (player.isClimbing) return;
 
     const oldPos = player.pos;
 
@@ -298,32 +297,26 @@ export class GameLoop {
 
   private _interact() {
     const { player, ladders } = this._state;
-    if (player.isClimbing) return;
     
-    // Check if player is at start or end of a ladder
+    // Toggle ladder interaction
     for (const ladder of ladders) {
       if (ladder.path_nodes.length < 2) continue;
-      const start = ladder.path_nodes[0];
-      const end = ladder.path_nodes[ladder.path_nodes.length - 1];
       
-      let targetPos = null;
-      if (player.pos.row === start.row && player.pos.col === start.col) {
-        targetPos = end;
-      } else if (player.pos.row === end.row && player.pos.col === end.col) {
-        targetPos = start;
+      let playerOnLadderNode = false;
+      for (const node of ladder.path_nodes) {
+        if (player.pos.row === node.row && player.pos.col === node.col) {
+          playerOnLadderNode = true;
+          break;
+        }
       }
       
-      if (targetPos) {
-        const dist = ladder.length * 150; // ms per block
+      if (playerOnLadderNode) {
+        // Toggle ladder state
         this._state = {
           ...this._state,
           player: {
             ...player,
-            isClimbing: true,
-            climbStart: player.pos,
-            climbEnd: targetPos,
-            climbTimer: 0,
-            climbDuration: dist
+            isOnLadder: !player.isOnLadder,
           }
         };
         break;
@@ -369,23 +362,7 @@ export class GameLoop {
 
   private _updateEntities(dt: number) {
     let player = this._state.player;
-    if (player.isClimbing && player.climbEnd) {
-      player.climbTimer += dt;
-      if (player.climbTimer >= player.climbDuration) {
-        player = {
-          ...player,
-          pos: { ...player.climbEnd },
-          isClimbing: false,
-          climbTimer: 0,
-          climbDuration: 0,
-          climbStart: null,
-          climbEnd: null,
-        };
-        this._pathInvalidFlag = true;
-      }
-    } else {
-      player = updatePlayer(player, dt);
-    }
+    player = updatePlayer(player, dt);
 
     // ICE slide
     if (player.isSliding && player.slideDir) {
@@ -671,7 +648,7 @@ export class GameLoop {
     }
     
     const player  = createPlayer(validStart, bombs);
-    player.isClimbing = false;
+    player.isOnLadder = false;
 
     const enemies = buildWave(wave, grid, validStart, s?.difficulty ?? 'normal');
     const timedEvents     = buildTimedEvents(round);

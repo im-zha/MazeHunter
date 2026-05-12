@@ -201,16 +201,8 @@ export interface PlayerState {
    * Điều này tạo hiệu ứng giảm tốc 50% mà không cần sửa vận tốc tuyệt đối.
    */
   mudBlocked: boolean;
-  /** Đang di chuyển trên thang (tắt điều khiển WASD) */
-  isClimbing: boolean;
-  /** ms đã trôi qua khi leo thang */
-  climbTimer: number;
-  /** Tổng thời gian leo thang (ms) */
-  climbDuration: number;
-  /** Điểm bắt đầu leo thang (tọa độ Grid) */
-  climbStart: Pos | null;
-  /** Điểm kết thúc leo thang (tọa độ Grid) */
-  climbEnd: Pos | null;
+  /** Đang di chuyển trên thang (điều khiển thủ công) */
+  isOnLadder: boolean;
 }
 
 /** Interface đại diện cho EnemyState. */

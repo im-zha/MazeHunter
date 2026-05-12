@@ -119,7 +119,8 @@ export class Renderer {
     }
 
     // 6. Entities
-    this._drawEnemies(enemies, offsetX, offsetY);
+    const isFreezeActive = player.freezeTimer > 0;
+    this._drawEnemies(enemies, isFreezeActive, offsetX, offsetY);
     this._drawPlayer(player, state, offsetX, offsetY);
 
     // 7. Debug paths
@@ -513,21 +514,8 @@ export class Renderer {
   private _drawPlayer(player: import('../core/types.js').PlayerState, state: import('../core/types.js').GameState, offsetX: number, offsetY: number) {
     const { ctx, tileSize } = this;
     
-    let cx = 0;
-    let cy = 0;
-
-    if (player.isClimbing && player.climbStart && player.climbEnd && player.climbDuration > 0) {
-      const t = Math.min(1, player.climbTimer / player.climbDuration);
-      const scx = offsetX + player.climbStart.col * tileSize + tileSize / 2;
-      const scy = offsetY + player.climbStart.row * tileSize + tileSize / 2;
-      const ecx = offsetX + player.climbEnd.col * tileSize + tileSize / 2;
-      const ecy = offsetY + player.climbEnd.row * tileSize + tileSize / 2;
-      cx = scx + (ecx - scx) * t;
-      cy = scy + (ecy - scy) * t;
-    } else {
-      cx = offsetX + player.pos.col * tileSize + tileSize / 2;
-      cy = offsetY + player.pos.row * tileSize + tileSize / 2;
-    }
+    const cx = offsetX + player.pos.col * tileSize + tileSize / 2;
+    const cy = offsetY + player.pos.row * tileSize + tileSize / 2;
 
     const r  = tileSize * 0.36;
 
@@ -592,13 +580,17 @@ export class Renderer {
     }
   }
 
-  private _drawEnemies(enemies: EnemyState[], offsetX: number, offsetY: number) {
+  private _drawEnemies(enemies: EnemyState[], isFreezeActive: boolean, offsetX: number, offsetY: number) {
     const { ctx, tileSize } = this;
 
     for (const enemy of enemies) {
       const baseColor  = ENEMY_COLORS[enemy.algoType];
       const traitColor = TRAIT_COLORS[enemy.trait];
-      const color      = traitColor ?? baseColor;
+      let color      = traitColor ?? baseColor;
+      
+      if (isFreezeActive) {
+        color = '#22d3ee'; // cyan-400
+      }
 
       const cx = offsetX + enemy.pos.col * tileSize + tileSize / 2;
       const cy = offsetY + enemy.pos.row * tileSize + tileSize / 2;
@@ -610,7 +602,7 @@ export class Renderer {
 
       ctx.save();
       ctx.shadowColor = color;
-      ctx.shadowBlur  = isBoss ? 28 : isElite ? 22 : 16;
+      ctx.shadowBlur  = isFreezeActive ? 24 : (isBoss ? 28 : isElite ? 22 : 16);
 
       if (enemy.mode === 'FLEE') {
         ctx.fillStyle   = 'rgba(255,255,255,0.9)';
