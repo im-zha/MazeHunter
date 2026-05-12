@@ -18,9 +18,9 @@
     hasSave = !!localStorage.getItem('mazehunter_save');
   });
 
-  function startGame(difficulty: Difficulty, biome: BiomeId) {
+  async function startGame(difficulty: Difficulty, biome: BiomeId) {
     sessionConfig.set({ difficulty, biome });
-    goto('/game');
+    await goto('/game');
   }
 
   function continueGame() {
@@ -43,9 +43,20 @@
     font-family: 'Inter', sans-serif;
     overflow-x: hidden;
   }
+
+  .landing-page {
+    background: linear-gradient(
+      180deg,
+      #111315 0%,
+      #080a0c 32%,
+      #111315 56%,
+      #141617 76%,
+      #07090a 100%
+    );
+  }
 </style>
 
-<div class="relative">
+<div class="landing-page relative">
   <LandingHeader />
 
   <main>
@@ -54,9 +65,8 @@
     <MainMenuSection
       {hasSave}
       onContinue={continueGame}
-      onLeaderboard={() => {}}
+      onLeaderboard={() => goto('/leaderboard')}
       onHowToPlay={() => {}}
-      onDebug={() => {}}
     />
 
     <FeaturesSection />

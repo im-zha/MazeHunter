@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-node';
 import { relative, sep } from 'node:path';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -14,14 +14,7 @@ const config = {
 		}
 	},
 	kit: {
-		// adapter-static: build to `build/` and serve with `npx serve build`
-		adapter: adapter({
-			pages: 'build',
-			assets: 'build',
-			fallback: 'index.html', // SPA fallback for client-side routing
-			precompress: false,
-			strict: true
-		})
+		adapter: adapter()
 	}
 };
 

@@ -126,6 +126,7 @@ export function movePlayer(
   let isOnLadderNode = false;
   if (player.isOnLadder) {
     for (const ladder of ladders) {
+      if (ladder.isCollapsed) continue;
       for (const node of ladder.path_nodes) {
         if (node.row === newRow && node.col === newCol) {
           isOnLadderNode = true;

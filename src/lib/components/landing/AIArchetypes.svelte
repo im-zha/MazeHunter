@@ -111,8 +111,8 @@
   }
 </script>
 
-<section id="ai-archetypes" class="py-24 bg-surface-container-low">
-  <div class="container mx-auto px-margin">
+<section id="ai-archetypes" class="ai-section py-24">
+  <div class="container mx-auto px-margin ai-inner">
     <div class="text-center mb-16">
       <h2 class="font-display-lg text-4xl font-black text-white mb-4 uppercase tracking-tight">
         AI Archetypes
@@ -236,6 +236,39 @@
 {/if}
 
 <style>
+  .ai-section {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, #141617 0%, rgba(26, 27, 29, 0.98) 22%, rgba(28, 27, 29, 0.98) 78%, #101213 100%);
+  }
+
+  .ai-section::before,
+  .ai-section::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 140px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .ai-section::before {
+    top: 0;
+    background: linear-gradient(180deg, #141617, rgba(20, 22, 23, 0));
+  }
+
+  .ai-section::after {
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(16, 18, 19, 0), #101213);
+  }
+
+  .ai-inner {
+    position: relative;
+    z-index: 1;
+  }
+
   @keyframes scale-in {
     from { opacity: 0; transform: scale(0.92); }
     to   { opacity: 1; transform: scale(1); }

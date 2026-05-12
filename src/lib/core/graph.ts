@@ -136,6 +136,7 @@ export function getLadderEdges(
 
   const edges: Neighbor[] = [];
   for (const ladder of ladders) {
+    if (ladder.isCollapsed) continue;
     const curIdx = ladder.path_nodes.findIndex(p => posEqual(p, pos));
     if (curIdx !== -1) {
       if (curIdx > 0) {

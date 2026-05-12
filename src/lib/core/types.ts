@@ -145,6 +145,12 @@ export interface LadderObject {
   path_nodes: Pos[];
   /** Khoảng cách từ start đến end. Cũng là chi phí pathfinding. */
   length: number;
+  /** True when a Lava Core Thermal Elevator has collapsed and cannot be used. */
+  isCollapsed?: boolean;
+  /** Active countdown before the elevator collapses. */
+  collapseTimerMs?: number;
+  /** Countdown before a collapsed elevator is rebuilt. */
+  regenerateTimerMs?: number;
 }
 
 // --------------- Algorithm Result ---------------
@@ -181,9 +187,9 @@ export interface TimedEvent {
 }
 
 export enum TimedEventType {
-  /** Open a previously blocked passage (convert WALL → BRIDGE). */
+  /** Open a previously blocked passage (convert WALL → FLOOR). */
   OPEN_ROUTE  = 'OPEN_ROUTE',
-  /** Collapse a bridge (convert BRIDGE → WALL). */
+  /** Legacy bridge-collapse event. No-op now that bridge tiles are removed. */
   COLLAPSE_BRIDGE = 'COLLAPSE_BRIDGE',
   /** Spawn a ladder at a random valid floor cell. */
   SPAWN_LADDER = 'SPAWN_LADDER',

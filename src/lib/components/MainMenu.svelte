@@ -99,7 +99,7 @@
 
     <!-- Controls hint -->
     <p class="controls">
-      WASD / Arrow Keys · Space: Place Wall · F1: Debug Mode
+      WASD / Arrow Keys · Space: Place Wall · E: Interact
     </p>
   </main>
 

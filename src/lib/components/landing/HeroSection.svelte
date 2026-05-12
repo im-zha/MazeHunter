@@ -1,11 +1,10 @@
 <!-- HeroSection.svelte — Full-screen hero with Cyberpunk Cockpit start modal -->
 <script lang="ts">
-  import { sessionConfig } from '$lib/stores/session-config.js';
   import type { BiomeId } from '$lib/core/types.js';
   import type { Difficulty } from '$lib/core/types.js';
 
   interface Props {
-    onStartGame: (difficulty: Difficulty, biome: BiomeId) => void;
+    onStartGame: (difficulty: Difficulty, biome: BiomeId) => void | Promise<void>;
   }
   let { onStartGame }: Props = $props();
 
@@ -15,15 +14,47 @@
   /** Currently selected values in the modal */
   let selectedDifficulty = $state<Difficulty>('normal');
   let selectedBiome      = $state<BiomeId>('data_jungle');
+  let playerName         = $state('');
+  let startError         = $state('');
+  let isStarting         = $state(false);
 
   function scrollToAI() {
     document.getElementById('ai-archetypes')?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  function confirmMission() {
-    sessionConfig.set({ difficulty: selectedDifficulty, biome: selectedBiome });
-    showModal = false;
-    onStartGame(selectedDifficulty, selectedBiome);
+  async function confirmMission() {
+    const name = playerName.trim().replace(/\s+/g, ' ');
+    if (name.length < 2) {
+      startError = 'Enter an operator name with at least 2 characters.';
+      return;
+    }
+
+    isStarting = true;
+    startError = '';
+
+    try {
+      const response = await fetch('/api/players', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error ?? 'Could not register operator.');
+
+      sessionStorage.setItem('mazehunter_player', JSON.stringify(result.user));
+      sessionStorage.setItem('mazehunter_mission', JSON.stringify({
+        difficulty: selectedDifficulty,
+        biome: selectedBiome,
+        startedAt: Date.now(),
+      }));
+
+      showModal = false;
+      await onStartGame(selectedDifficulty, selectedBiome);
+    } catch (error) {
+      startError = error instanceof Error ? error.message : 'Could not start mission.';
+    } finally {
+      isStarting = false;
+    }
   }
 
   // ── Biome definitions for the selector ────────────────────────────────────
@@ -68,7 +99,7 @@
   }
 </script>
 
-<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+<section class="hero-section relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
   <!-- Maze Background with Fog -->
   <div class="absolute inset-0 z-0">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#131315_70%)] z-10"></div>
@@ -122,6 +153,7 @@
 
   <!-- Scanline overlay -->
   <div class="scanline-overlay absolute inset-0 z-40" aria-hidden="true"></div>
+  <div class="hero-bottom-fade" aria-hidden="true"></div>
 </section>
 
 <!-- ═══════════════════ MISSION CONFIG MODAL ═══════════════════════════════ -->
@@ -153,6 +185,21 @@
 
       <!-- ── Body ─────────────────────────────────────────────────────── -->
       <div class="modal-body">
+        <div class="config-section">
+          <p class="config-label">OPERATOR IDENT</p>
+          <input
+            id="player-name-input"
+            class="operator-input"
+            bind:value={playerName}
+            maxlength="24"
+            placeholder="Enter your name"
+            autocomplete="nickname"
+            onkeydown={(e) => e.key === 'Enter' && confirmMission()}
+          />
+          {#if startError}
+            <p class="start-error">{startError}</p>
+          {/if}
+        </div>
 
         <!-- THREAT LEVEL -->
         <div class="config-section">
@@ -222,8 +269,14 @@
       <!-- ── Footer ───────────────────────────────────────────────────── -->
       <div class="modal-footer">
         <button onclick={() => (showModal = false)} class="modal-cancel">← ABORT</button>
-        <button id="confirm-mission-btn" onclick={confirmMission} class="modal-confirm" style="background: var(--accent)">
-          DEPLOY MISSION
+        <button
+          id="confirm-mission-btn"
+          onclick={confirmMission}
+          class="modal-confirm"
+          style="background: var(--accent)"
+          disabled={isStarting}
+        >
+          {isStarting ? 'REGISTERING...' : 'DEPLOY MISSION'}
           <span class="modal-confirm-arrow">→</span>
         </button>
       </div>
@@ -232,6 +285,25 @@
 {/if}
 
 <style>
+  .hero-section {
+    background: #111315;
+  }
+
+  .hero-bottom-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 170px;
+    z-index: 41;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(17, 19, 21, 0) 0%,
+      rgba(12, 15, 16, 0.62) 55%,
+      #080a0c 100%
+    );
+  }
   /* ── Modal shell ──────────────────────────────────────────────────────── */
   .mission-modal {
     background: rgba(8, 8, 14, 0.97);
@@ -295,7 +367,37 @@
     flex-direction: column;
     gap: 28px;
   }
-  .config-section {}
+  .operator-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-left: 2px solid var(--accent, #4edea3);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 14px 16px;
+    text-transform: uppercase;
+    outline: none;
+  }
+  .operator-input:focus {
+    border-color: var(--accent, #4edea3);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent, #4edea3) 24%, transparent);
+  }
+  .operator-input::placeholder {
+    color: rgba(255,255,255,0.28);
+    text-transform: uppercase;
+  }
+  .start-error {
+    margin: 8px 0 0;
+    color: #ff5f7a;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
   .config-label {
     font-family: 'Outfit', sans-serif;
     font-size: 9px;
@@ -470,6 +572,10 @@
   .modal-confirm:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
+  }
+  .modal-confirm:disabled {
+    cursor: wait;
+    opacity: 0.55;
   }
   .modal-confirm-arrow {
     font-size: 16px;

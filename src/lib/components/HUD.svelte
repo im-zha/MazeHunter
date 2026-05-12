@@ -211,10 +211,11 @@
 
       <!-- Stealth indicator -->
       {#if inStealth}
-        <div class="glass-panel px-3 py-1.5 rounded flex items-center gap-2 animate-pulse"
+        <div class="glass-panel px-3 py-1.5 rounded flex items-center gap-2 animate-pulse
+                    w-fit max-w-[11rem] self-start"
              style="border:1px solid {biomeAccent}66">
-          <span class="w-2 h-2 rounded-full" style="background:{biomeAccent}"></span>
-          <span class="font-label-caps text-[9px] tracking-widest" style="color:{biomeAccent}">STEALTH ACTIVE</span>
+          <span class="w-2 h-2 shrink-0 rounded-full" style="background:{biomeAccent}"></span>
+          <span class="font-label-caps text-[9px] tracking-widest whitespace-nowrap" style="color:{biomeAccent}">STEALTH ACTIVE</span>
         </div>
       {/if}
 

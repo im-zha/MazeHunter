@@ -48,7 +48,6 @@ import {
 } from './event-manager.js';
 import { isWallSafe } from '../algorithms/dsu.js';
 import { gameState } from '../stores/game-state.js';
-import { debugMode, toggleDebug } from '../stores/debug-store.js';
 import { settings } from '../stores/settings-store.js';
 import { sessionConfig } from '../stores/session-config.js';
 import { resolveTheme } from '../core/map-themes.js';
@@ -80,7 +79,6 @@ export class GameLoop {
   private _exitPos!: Pos;
   private _waveTimeMs = 0;
   private _pathInvalidFlag = false;
-  private _debugMode = false;
 
   /** Remaining ms for round intro screen. */
   private _introTimer = 0;
@@ -89,11 +87,14 @@ export class GameLoop {
   private _volatileTimer = 0;
   /** Interval between Volatile explosions (ms). */
   private static readonly VOLATILE_INTERVAL = 5000;
+  /** Duration to keep Volatile sector detonation visuals visible. */
+  private static readonly VOLATILE_FLASH_MS = 650;
 
   /** Melted Slag (Lava Core MUD): cycle timer (ms). */
   private _slagTimer = 0;
   private static readonly SLAG_INTERVAL = 5000;
   private static readonly SLAG_ERUPT_MS = 1000; // last 1000 ms = eruption
+  private static readonly THERMAL_REBUILD_MS = 5000;
 
   constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
@@ -109,9 +110,6 @@ export class GameLoop {
       this._currentSessionConfig = sc;
     });
 
-    debugMode.subscribe(d => {
-      this._debugMode = d;
-    });
   }
 
   // --------------- Lifecycle ---------------
@@ -157,7 +155,13 @@ export class GameLoop {
     cancelAnimationFrame(this._rafId);
     // Patch player for any saved states predating the mudBlocked field
     const patchedGrid = savedState.grid.map(row =>
-      row.map(cell => ((cell as unknown as number) === 11 || (cell as unknown as number) === 13) ? CellType.FLOOR : cell)
+      row.map(cell => {
+        const numericCell = cell as unknown as number;
+        if (numericCell === 11 || numericCell === 13 || cell === CellType.BRIDGE) {
+          return CellType.FLOOR;
+        }
+        return cell;
+      })
     );
 
     // Find a valid floor cell for the player if needed (fallback)
@@ -350,6 +354,7 @@ export class GameLoop {
     
     // Toggle ladder interaction
     for (const ladder of ladders) {
+      if (ladder.isCollapsed) continue;
       if (ladder.path_nodes.length < 2) continue;
       
       let playerOnLadderNode = false;
@@ -574,7 +579,10 @@ export class GameLoop {
         this._volatileTimer -= GameLoop.VOLATILE_INTERVAL;
         this._triggerVolatileExplosion();
       }
-      this._state = { ...this._state, volatileTimer: this._volatileTimer };
+      const volatileHot = this._volatileTimer < GameLoop.VOLATILE_FLASH_MS
+        ? this._state.volatileHot
+        : new Set<string>();
+      this._state = { ...this._state, volatileTimer: this._volatileTimer, volatileHot };
 
       // ── MELTED SLAG (Lava Core MUD — 5 s cycle, last 1 s = eruption) ──
       this._slagTimer += dt;
@@ -596,10 +604,79 @@ export class GameLoop {
         }
       }
       this._state = { ...this._state, slagTimer: this._slagTimer, slagHot };
+
+      this._tickThermalElevators(dt);
     }
 
     // ── TACTICAL AOE EVENTS (all biomes) ──────────────────────────────
     this._tickAoeEvents(dt);
+  }
+
+  private _nextThermalCollapseMs(): number {
+    return 7_000 + Math.floor(Math.random() * 8_000);
+  }
+
+  private _tickThermalElevators(dt: number) {
+    let changed = false;
+    const { player } = this._state;
+
+    const ladders = this._state.ladders.map(ladder => {
+      if (!ladder.path_nodes?.length) return ladder;
+
+      if (ladder.isCollapsed) {
+        const regenerateTimerMs = (ladder.regenerateTimerMs ?? GameLoop.THERMAL_REBUILD_MS) - dt;
+        if (regenerateTimerMs <= 0) {
+          changed = true;
+          return {
+            ...ladder,
+            isCollapsed: false,
+            collapseTimerMs: this._nextThermalCollapseMs(),
+            regenerateTimerMs: undefined,
+          };
+        }
+        return { ...ladder, regenerateTimerMs };
+      }
+
+      const collapseTimerMs = (ladder.collapseTimerMs ?? this._nextThermalCollapseMs()) - dt;
+      if (collapseTimerMs <= 0) {
+        changed = true;
+        return {
+          ...ladder,
+          isCollapsed: true,
+          collapseTimerMs: undefined,
+          regenerateTimerMs: GameLoop.THERMAL_REBUILD_MS,
+        };
+      }
+
+      if (collapseTimerMs !== ladder.collapseTimerMs) changed = true;
+      return { ...ladder, collapseTimerMs };
+    });
+
+    if (!changed) return;
+
+    const collapsedUnderPlayer = ladders.find(ladder =>
+      ladder.isCollapsed && ladder.path_nodes.some(node => posEqual(node, player.pos))
+    );
+    let updatedPlayer = player;
+    if (collapsedUnderPlayer) {
+      const endpoints = [
+        collapsedUnderPlayer.path_nodes[0],
+        collapsedUnderPlayer.path_nodes[collapsedUnderPlayer.path_nodes.length - 1],
+      ];
+      const nearest = endpoints.reduce((best, cur) => {
+        const bestDist = Math.abs(best.row - player.pos.row) + Math.abs(best.col - player.pos.col);
+        const curDist = Math.abs(cur.row - player.pos.row) + Math.abs(cur.col - player.pos.col);
+        return curDist < bestDist ? cur : best;
+      });
+      updatedPlayer = { ...player, pos: nearest, isOnLadder: false };
+    }
+
+    this._state = {
+      ...this._state,
+      ladders,
+      player: updatedPlayer,
+    };
+    this._pathInvalidFlag = true;
   }
 
   /** Tick Tactical AoE Events and apply biome-specific detonation side-effects. */
@@ -848,7 +925,7 @@ export class GameLoop {
       wave,
       lives,
       timeElapsedMs: 0,
-      debugMode: this._debugMode,
+      debugMode: false,
       fogEnabled: s?.fogEnabled ?? true,
       player,
       enemies,
@@ -913,6 +990,6 @@ export class GameLoop {
   // --------------- Push state to store ---------------
 
   private _pushState() {
-    gameState.set({ ...this._state, debugMode: this._debugMode });
+    gameState.set({ ...this._state, debugMode: false });
   }
 }

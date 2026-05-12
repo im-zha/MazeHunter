@@ -11,7 +11,7 @@ import {
   type TimedEvent,
   type EnemyState,
 } from '../core/types.js';
-import { findCells, findWalkable } from '../core/graph.js';
+import { findWalkable } from '../core/graph.js';
 import { createEnemy, baseIntervalForTrait } from '../entities/enemy.js';
 import { generateLadders } from '../core/maze-generator.js';
 import { AlgoType } from '../core/types.js';
@@ -52,12 +52,6 @@ export function buildTimedEvents(round: number): TimedEvent[] {
       fired: false,
       label: '💀 Elite enemy spawned!',
       type: TimedEventType.SPAWN_ELITE,
-    },
-    {
-      triggerMs: 25_000,
-      fired: false,
-      label: '🌉 Bridge collapsed!',
-      type: TimedEventType.COLLAPSE_BRIDGE,
     },
     {
       triggerMs: 35_000,
@@ -117,18 +111,13 @@ export function applyTimedEvent(
         // Pick a candidate near the middle of the map
         const mid = Math.floor(candidates.length / 2);
         const chosen = candidates[mid];
-        grid[chosen.row][chosen.col] = CellType.BRIDGE;
+        grid[chosen.row][chosen.col] = CellType.FLOOR;
       }
       break;
     }
 
     case TimedEventType.COLLAPSE_BRIDGE: {
-      // Find a bridge tile and collapse it to a wall
-      const bridges = findCells(grid as GameState['grid'], CellType.BRIDGE);
-      if (bridges.length > 0) {
-        const b = bridges[Math.floor(bridges.length / 2)];
-        grid[b.row][b.col] = CellType.WALL;
-      }
+      // Bridge tiles are no longer generated; keep this as a no-op for old saves/events.
       break;
     }
 

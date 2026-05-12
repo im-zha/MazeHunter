@@ -12,6 +12,8 @@ import {
   type LadderObject,
   type Pos,
 } from '../core/types.js';
+import { gsap } from 'gsap';
+import { createNoise2D, createNoise3D, type NoiseFunction2D, type NoiseFunction3D } from 'simplex-noise';
 import { ENEMY_COLORS, TRAIT_COLORS } from '../entities/enemy.js';
 import { getRoundIntro } from './wave-manager.js';
 import { MAP_THEMES } from '../core/map-themes.js';
@@ -33,6 +35,10 @@ const CELL_COLORS_BASE: Partial<Record<CellType, string>> = {
 };
 
 const DEBUG_PATH_ALPHA = 0.7;
+const clamp01 = gsap.utils.clamp(0, 1);
+const easeOut = gsap.parseEase('power3.out');
+const easeInOut = gsap.parseEase('sine.inOut');
+const easeExplode = gsap.parseEase('expo.out');
 
 /** Lớp đại diện cho Renderer. */
 export class Renderer {
@@ -41,6 +47,8 @@ export class Renderer {
   private fogCtx: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
   private tileSize: number;
   private _pulse = 0;
+  private noise2D: NoiseFunction2D = createNoise2D();
+  private noise3D: NoiseFunction3D = createNoise3D();
 
   constructor(canvas: HTMLCanvasElement, tileSize = 32) {
     const ctx = canvas.getContext('2d');
@@ -317,20 +325,113 @@ export class Renderer {
         if (cell === CellType.VOLATILE) {
           const hot = state?.volatileHot?.has(`${r},${c}`) ?? false;
           const volTimer = state?.volatileTimer ?? 0;
-          // Blink faster as explosion approaches (every 5000ms)
-          const timeFrac = volTimer / 5000; // 0→1
+          const timeFrac = clamp01(volTimer / 5000);
+          const warningFrac = easeInOut(clamp01((timeFrac - 0.62) / 0.38));
+          const heatNoise = this.noise3D(r * 0.7, c * 0.7, this._pulse * 0.16);
           const blinkRate = 1.5 + timeFrac * 5;
-          const blink = Math.sin(this._pulse * blinkRate) * 0.5 + 0.5;
+          const blink = clamp01(Math.sin(this._pulse * blinkRate + heatNoise * 0.8) * 0.5 + 0.5);
           ctx.save();
-          ctx.globalAlpha = hot ? 0.9 : 0.35 + blink * 0.45;
-          ctx.fillStyle = hot ? '#ff2200' : '#ff4500';
-          ctx.shadowColor = '#ff4500'; ctx.shadowBlur = hot ? 20 : 8;
+          ctx.globalAlpha = 0.38 + blink * 0.32 + warningFrac * 0.2 + heatNoise * 0.04;
+          ctx.fillStyle = '#4a0e00';
+          ctx.shadowColor = warningFrac > 0 ? '#ff2a00' : '#ff4500'; ctx.shadowBlur = 8 + warningFrac * 18;
           ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = 0.18 + warningFrac * 0.32 + (hot ? 0.35 : 0);
+          const core = ctx.createRadialGradient(cx, cy, tileSize * 0.04, cx, cy, tileSize * 0.52);
+          core.addColorStop(0, hot ? 'rgba(255,245,190,0.92)' : 'rgba(255,120,24,0.58)');
+          core.addColorStop(0.48, 'rgba(255,42,0,0.34)');
+          core.addColorStop(1, 'rgba(255,0,64,0)');
+          ctx.fillStyle = core;
+          ctx.fillRect(x, y, tileSize, tileSize);
+          ctx.globalCompositeOperation = 'source-over';
+
+          if (warningFrac > 0 && !hot) {
+            const ringR = tileSize * (0.18 + warningFrac * 0.34 + blink * 0.08 + Math.abs(heatNoise) * 0.035);
+            ctx.globalAlpha = 0.25 + warningFrac * 0.55;
+            ctx.strokeStyle = '#ffcc00';
+            ctx.lineWidth = Math.max(1, tileSize * 0.045);
+            ctx.shadowColor = '#ffcc00';
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = warningFrac * (0.18 + blink * 0.22);
+            ctx.strokeStyle = '#ff1744';
+            ctx.lineWidth = Math.max(1, tileSize * 0.025);
+            ctx.beginPath();
+            ctx.arc(cx, cy, tileSize * (0.46 + blink * 0.08), 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.globalAlpha = 0.18 + warningFrac * 0.5;
+            ctx.strokeStyle = '#ff2a00';
+            ctx.lineWidth = Math.max(1, tileSize * 0.035);
+            for (let i = -1; i <= 2; i++) {
+              const yy = y + tileSize * (0.18 + i * 0.24 + (this._pulse * 0.05) % 0.24);
+              ctx.beginPath();
+              ctx.moveTo(x + tileSize * 0.18, yy);
+              ctx.lineTo(x + tileSize * 0.82, yy - tileSize * 0.22);
+              ctx.stroke();
+            }
+
+            ctx.fillStyle = '#ffcc00';
+            for (let i = 0; i < 4; i++) {
+              const angle = -Math.PI / 2 + i * (Math.PI * 0.5) + this._pulse * 0.08;
+              const px = cx + Math.cos(angle) * tileSize * 0.36;
+              const py = cy + Math.sin(angle) * tileSize * 0.36;
+              ctx.globalAlpha = warningFrac * (0.45 + blink * 0.45);
+              ctx.fillRect(px - tileSize * 0.035, py - tileSize * 0.035, tileSize * 0.07, tileSize * 0.07);
+            }
+          }
+
+          if (hot) {
+            const flashFrac = easeExplode(clamp01(1 - volTimer / 650));
+            const blast = ctx.createRadialGradient(cx, cy, tileSize * 0.05, cx, cy, tileSize * (0.72 + flashFrac * 0.22));
+            blast.addColorStop(0, 'rgba(255,245,180,0.95)');
+            blast.addColorStop(0.25, 'rgba(255,70,0,0.78)');
+            blast.addColorStop(0.68, 'rgba(255,0,64,0.28)');
+            blast.addColorStop(1, 'rgba(40,0,0,0)');
+            ctx.globalAlpha = 0.95;
+            ctx.fillStyle = blast;
+            ctx.fillRect(x - tileSize * 0.18, y - tileSize * 0.18, tileSize * 1.36, tileSize * 1.36);
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.45 + flashFrac * 0.4;
+            ctx.strokeStyle = '#fff3a0';
+            ctx.lineWidth = Math.max(2, tileSize * 0.07);
+            ctx.beginPath();
+            ctx.arc(cx, cy, tileSize * (0.22 + flashFrac * 0.55), 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.shadowColor = '#ff2a00';
+            ctx.shadowBlur = 20;
+            for (let i = 0; i < 16; i++) {
+              const angle = i * (Math.PI * 2 / 16) + this._pulse * 0.08 + this.noise2D(i, this._pulse * 0.3) * 0.16;
+              ctx.globalAlpha = 0.55 + flashFrac * 0.25;
+              ctx.strokeStyle = i % 2 === 0 ? '#ffec8a' : '#ff1744';
+              ctx.lineWidth = Math.max(1, tileSize * (i % 3 === 0 ? 0.06 : 0.035));
+              ctx.beginPath();
+              ctx.moveTo(cx + Math.cos(angle) * tileSize * 0.16, cy + Math.sin(angle) * tileSize * 0.16);
+              ctx.lineTo(cx + Math.cos(angle) * tileSize * (0.72 + flashFrac * 0.18), cy + Math.sin(angle) * tileSize * (0.72 + flashFrac * 0.18));
+              ctx.stroke();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.fillStyle = '#ff1744';
+            for (let i = 0; i < 14; i++) {
+              const px = x + clamp01(0.5 + this.noise3D(i * 0.8, r, this._pulse * 0.9) * 0.48) * tileSize;
+              const py = y + clamp01(0.5 + this.noise3D(i * 0.8, c, this._pulse * 0.85 + 12) * 0.48) * tileSize;
+              const s = tileSize * (0.07 + (i % 3) * 0.025);
+              ctx.globalAlpha = 0.38 + flashFrac * 0.35;
+              ctx.fillRect(px - s / 2, py - s / 2, s, s);
+            }
+          }
+
           ctx.globalAlpha = 1;
           ctx.font = `bold ${Math.round(tileSize * 0.45)}px sans-serif`;
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillStyle = '#ffcc00';
-          ctx.fillText('⚠', cx, cy);
+          ctx.fillStyle = hot ? '#fff3a0' : warningFrac > 0 ? '#ffcc00' : '#ff9100';
+          ctx.shadowColor = '#ff4500';
+          ctx.shadowBlur = hot ? 14 : 6 + warningFrac * 10;
+          ctx.fillText('!', cx, cy);
           ctx.restore();
         }
       }
@@ -371,6 +472,19 @@ export class Renderer {
     for (const ladder of ladders) {
       if (!ladder.path_nodes || ladder.path_nodes.length < 2) continue;
 
+      const isThermal = biome?.id === 'lava_core';
+      if (isThermal && ladder.isCollapsed) {
+        this._drawCollapsedThermalElevator(ladder, offsetX, offsetY);
+        continue;
+      }
+
+      const thermalShake = isThermal && (ladder.collapseTimerMs ?? Infinity) < 2000
+        ? easeOut(clamp01(1 - (ladder.collapseTimerMs ?? 0) / 2000))
+        : 0;
+      const thermalSeed = ladder.path_nodes[0].row * 17 + ladder.path_nodes[0].col * 31;
+      const shakeX = isThermal ? this.noise3D(thermalSeed, this._pulse * 3.6, 0) * tileSize * 0.12 * thermalShake : 0;
+      const shakeY = isThermal ? this.noise3D(thermalSeed, this._pulse * 3.2, 8) * tileSize * 0.1 * thermalShake : 0;
+
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.55)';
       ctx.shadowBlur  = 6;
@@ -380,10 +494,10 @@ export class Renderer {
       const RAIL_OFFSET = tileSize * 0.22;
 
       for (let i = 0; i < ladder.path_nodes.length - 1; i++) {
-        const sx = offsetX + ladder.path_nodes[i].col * tileSize + half;
-        const sy = offsetY + ladder.path_nodes[i].row * tileSize + half;
-        const ex = offsetX + ladder.path_nodes[i+1].col * tileSize + half;
-        const ey = offsetY + ladder.path_nodes[i+1].row * tileSize + half;
+        const sx = offsetX + ladder.path_nodes[i].col * tileSize + half + shakeX;
+        const sy = offsetY + ladder.path_nodes[i].row * tileSize + half + shakeY;
+        const ex = offsetX + ladder.path_nodes[i+1].col * tileSize + half + shakeX;
+        const ey = offsetY + ladder.path_nodes[i+1].row * tileSize + half + shakeY;
         const isHoriz = Math.abs(ex - sx) > Math.abs(ey - sy);
 
         // --- Rails ---
@@ -443,6 +557,29 @@ export class Renderer {
         }
       }
 
+      if (isThermal && thermalShake > 0) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = '#ff2a00';
+        ctx.shadowBlur = 18 + thermalShake * 18;
+        for (const node of ladder.path_nodes) {
+          const nx = offsetX + node.col * tileSize + half + shakeX;
+          const ny = offsetY + node.row * tileSize + half + shakeY;
+          const sparkNoise = this.noise3D(node.row, node.col, this._pulse * 1.8);
+          ctx.globalAlpha = thermalShake * (0.38 + Math.abs(sparkNoise) * 0.35);
+          ctx.strokeStyle = sparkNoise > 0 ? '#ffec8a' : '#ff1744';
+          ctx.lineWidth = Math.max(1, tileSize * 0.035);
+          ctx.beginPath();
+          ctx.moveTo(nx - tileSize * 0.22, ny + sparkNoise * tileSize * 0.08);
+          ctx.lineTo(nx + tileSize * 0.22, ny - sparkNoise * tileSize * 0.08);
+          ctx.stroke();
+          ctx.globalAlpha = thermalShake * 0.45;
+          ctx.beginPath();
+          ctx.arc(nx, ny, tileSize * (0.2 + thermalShake * 0.16), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
       ctx.restore();
 
       // --- Glowing endpoint nodes ---
@@ -450,8 +587,8 @@ export class Renderer {
       const startNode = ladder.path_nodes[0];
       const endNode   = ladder.path_nodes[ladder.path_nodes.length - 1];
       const endpoints = [
-        [offsetX + startNode.col * tileSize + half, offsetY + startNode.row * tileSize + half],
-        [offsetX + endNode.col   * tileSize + half, offsetY + endNode.row   * tileSize + half],
+        [offsetX + startNode.col * tileSize + half + shakeX, offsetY + startNode.row * tileSize + half + shakeY],
+        [offsetX + endNode.col   * tileSize + half + shakeX, offsetY + endNode.row   * tileSize + half + shakeY],
       ];
 
       for (const [nx, ny] of endpoints) {
@@ -470,6 +607,64 @@ export class Renderer {
         ctx.restore();
       }
     }
+  }
+
+  private _drawCollapsedThermalElevator(ladder: LadderObject, offsetX: number, offsetY: number) {
+    const { ctx, tileSize } = this;
+    const half = tileSize / 2;
+    const rebuildFrac = easeInOut(clamp01(1 - (ladder.regenerateTimerMs ?? 0) / 5000));
+
+    ctx.save();
+    ctx.shadowColor = '#ff4500';
+    ctx.shadowBlur = 8 + rebuildFrac * 10;
+
+    for (const node of ladder.path_nodes) {
+      const cx = offsetX + node.col * tileSize + half;
+      const cy = offsetY + node.row * tileSize + half;
+
+      ctx.globalAlpha = 0.22 + rebuildFrac * 0.25;
+      ctx.fillStyle = '#2b0800';
+      ctx.fillRect(cx - tileSize * 0.28, cy - tileSize * 0.12, tileSize * 0.56, tileSize * 0.24);
+
+      ctx.globalAlpha = 0.55 + rebuildFrac * 0.35;
+      ctx.strokeStyle = '#ff6b35';
+      ctx.lineWidth = Math.max(1, tileSize * 0.04);
+      ctx.beginPath();
+      ctx.moveTo(cx - tileSize * 0.28, cy - tileSize * 0.18);
+      ctx.lineTo(cx - tileSize * 0.02, cy + tileSize * 0.08);
+      ctx.lineTo(cx + tileSize * 0.26, cy - tileSize * 0.12);
+      ctx.stroke();
+
+      for (let i = 0; i < 3; i++) {
+        const emberPhase = this._pulse * 1.4 + i + node.row * 0.2 + node.col * 0.3;
+        const emberNoise = this.noise3D(node.row + i, node.col - i, this._pulse * 0.25);
+        const ex = cx + Math.sin(emberPhase + emberNoise) * tileSize * 0.22;
+        const ey = cy + Math.cos(emberPhase * 0.8 + emberNoise) * tileSize * 0.12;
+        ctx.globalAlpha = (0.25 + rebuildFrac * 0.55) * (0.6 + Math.sin(emberPhase * 2) * 0.25);
+        ctx.fillStyle = i % 2 === 0 ? '#ff9100' : '#ff2a00';
+        ctx.fillRect(ex, ey, tileSize * 0.055, tileSize * 0.055);
+      }
+    }
+
+    if (rebuildFrac > 0.55) {
+      const startNode = ladder.path_nodes[0];
+      const endNode = ladder.path_nodes[ladder.path_nodes.length - 1];
+      const sx = offsetX + startNode.col * tileSize + half;
+      const sy = offsetY + startNode.row * tileSize + half;
+      const ex = offsetX + endNode.col * tileSize + half;
+      const ey = offsetY + endNode.row * tileSize + half;
+      ctx.globalAlpha = (rebuildFrac - 0.55) / 0.45 * 0.45;
+      ctx.strokeStyle = '#ff9100';
+      ctx.lineWidth = Math.max(1.5, tileSize * 0.05);
+      ctx.setLineDash([tileSize * 0.18, tileSize * 0.14]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
   }
 
   // --------------- Themed Terrain Helpers ---------------
@@ -640,11 +835,7 @@ export class Renderer {
         // ── Detonation Flash ─────────────────────────────────────────────
         const flashAlpha = ev.flashMs / AOE_FLASH_MS;
         ctx.save();
-        ctx.globalAlpha = flashAlpha * 0.85;
-        ctx.fillStyle   = accent;
-        ctx.shadowColor = accent;
-        ctx.shadowBlur  = 50;
-        ctx.fillRect(zoneX, zoneY, zoneW, zoneH);
+        this._drawBiomeAoeVisual(biome, zoneX, zoneY, zoneW, zoneH, cx, cy, 1, flashAlpha, true);
         ctx.restore();
 
       } else if (!ev.detonated) {
@@ -655,33 +846,12 @@ export class Renderer {
 
         // Zone fill
         ctx.save();
-        ctx.globalAlpha = blink * (0.08 + warningFrac * 0.18);
-        ctx.fillStyle   = accent;
-        ctx.fillRect(zoneX, zoneY, zoneW, zoneH);
+        this._drawBiomeAoeVisual(biome, zoneX, zoneY, zoneW, zoneH, cx, cy, warningFrac, blink, false);
 
-        // Zone border
-        ctx.globalAlpha = blink * (0.55 + warningFrac * 0.4);
+        // Center crosshair
         ctx.strokeStyle = accent;
         ctx.shadowColor = accent;
         ctx.shadowBlur  = 14;
-        ctx.lineWidth   = 1.5 + warningFrac;
-        ctx.strokeRect(zoneX + 1, zoneY + 1, zoneW - 2, zoneH - 2);
-
-        // Corner crosses
-        const cs = tileSize * 0.22;
-        for (const [qx, qy] of [
-          [zoneX + 1, zoneY + 1], [zoneX + zoneW - 1, zoneY + 1],
-          [zoneX + 1, zoneY + zoneH - 1], [zoneX + zoneW - 1, zoneY + zoneH - 1],
-        ]) {
-          ctx.globalAlpha = blink * 0.9;
-          ctx.lineWidth   = 2;
-          ctx.beginPath();
-          ctx.moveTo(qx - cs, qy); ctx.lineTo(qx + cs, qy);
-          ctx.moveTo(qx, qy - cs); ctx.lineTo(qx, qy + cs);
-          ctx.stroke();
-        }
-
-        // Center crosshair
         ctx.globalAlpha = blink * 0.8;
         ctx.lineWidth   = 1.2;
         ctx.beginPath();
@@ -702,6 +872,221 @@ export class Renderer {
         ctx.restore();
       }
     }
+  }
+
+  private _drawBiomeAoeVisual(
+    biome: BiomeConfig,
+    zoneX: number,
+    zoneY: number,
+    zoneW: number,
+    zoneH: number,
+    cx: number,
+    cy: number,
+    progress: number,
+    intensity: number,
+    detonated: boolean
+  ) {
+    progress = easeInOut(clamp01(progress));
+    intensity = clamp01(intensity);
+
+    if (biome.id === 'data_jungle') {
+      this._drawCyberSporeBloom(zoneX, zoneY, zoneW, zoneH, cx, cy, progress, intensity, detonated);
+      return;
+    }
+    if (biome.id === 'cooling_sea') {
+      this._drawCryoGeyser(zoneX, zoneY, zoneW, zoneH, cx, cy, progress, intensity, detonated);
+      return;
+    }
+    this._drawVolatileEruption(zoneX, zoneY, zoneW, zoneH, cx, cy, progress, intensity, detonated);
+  }
+
+  private _drawCyberSporeBloom(
+    zoneX: number,
+    zoneY: number,
+    zoneW: number,
+    zoneH: number,
+    cx: number,
+    cy: number,
+    progress: number,
+    intensity: number,
+    detonated: boolean
+  ) {
+    const { ctx, tileSize } = this;
+    const phase = this._pulse;
+    ctx.globalCompositeOperation = 'lighter';
+    const mist = ctx.createRadialGradient(cx, cy, tileSize * 0.25, cx, cy, zoneW * 0.75);
+    mist.addColorStop(0, detonated ? 'rgba(190,255,150,0.78)' : 'rgba(78,222,163,0.38)');
+    mist.addColorStop(0.45, 'rgba(57,255,20,0.28)');
+    mist.addColorStop(1, 'rgba(4,30,14,0)');
+
+    ctx.globalAlpha = intensity * (detonated ? 0.95 : 0.75);
+    ctx.fillStyle = mist;
+    ctx.fillRect(zoneX, zoneY, zoneW, zoneH);
+
+    for (let i = 0; i < 30; i++) {
+      const t = i / 30;
+      const sporeNoise = this.noise3D(i * 0.35, progress * 1.7, phase * 0.16);
+      const orbit = phase * (0.45 + t) + i * 2.17 + sporeNoise * 0.75;
+      const radius = tileSize * (0.25 + ((i * 7) % 10) / 10 + sporeNoise * 0.08) * (1.1 + progress * 0.9);
+      const x = cx + Math.cos(orbit) * radius + this.noise3D(i, phase * 0.2, 3) * tileSize * 0.22;
+      const y = cy + Math.sin(orbit * 0.8) * radius * 0.72 + this.noise3D(i, phase * 0.2, 9) * tileSize * 0.16;
+      const dotR = tileSize * (0.045 + (i % 4) * 0.012) * (detonated ? 1.8 : 1);
+
+      ctx.globalAlpha = intensity * (detonated ? 0.75 : 0.45);
+      ctx.fillStyle = i % 3 === 0 ? '#b6ff7a' : '#39ff14';
+      ctx.shadowColor = '#39ff14';
+      ctx.shadowBlur = detonated ? 18 : 10;
+      ctx.beginPath();
+      ctx.arc(x, y, dotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = intensity * (0.18 + progress * 0.22);
+    ctx.strokeStyle = '#7aff9e';
+    ctx.lineWidth = Math.max(1, tileSize * 0.035);
+    for (let i = 0; i < 8; i++) {
+      const wispNoise = this.noise3D(i, phase * 0.12, progress);
+      const y = zoneY + zoneH * (0.12 + i * 0.11) + wispNoise * tileSize * 0.16;
+      ctx.beginPath();
+      ctx.moveTo(zoneX + tileSize * 0.2, y);
+      ctx.bezierCurveTo(cx - tileSize, y - tileSize * 0.5, cx + tileSize, y + tileSize * 0.5, zoneX + zoneW - tileSize * 0.2, y);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  private _drawCryoGeyser(
+    zoneX: number,
+    zoneY: number,
+    zoneW: number,
+    zoneH: number,
+    cx: number,
+    cy: number,
+    progress: number,
+    intensity: number,
+    detonated: boolean
+  ) {
+    const { ctx, tileSize } = this;
+    const phase = this._pulse;
+    const height = zoneH * (0.55 + progress * 0.35);
+    ctx.globalCompositeOperation = 'lighter';
+    const geyser = ctx.createLinearGradient(cx, cy + zoneH * 0.45, cx, cy - height);
+    geyser.addColorStop(0, 'rgba(0,255,255,0.08)');
+    geyser.addColorStop(0.45, detonated ? 'rgba(230,255,255,0.82)' : 'rgba(0,229,255,0.5)');
+    geyser.addColorStop(1, 'rgba(255,255,255,0)');
+
+    ctx.globalAlpha = intensity * (detonated ? 0.95 : 0.7);
+    ctx.fillStyle = geyser;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + tileSize * 0.2, zoneW * 0.28, height, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = intensity * (0.25 + progress * 0.35);
+    ctx.strokeStyle = '#e8ffff';
+    ctx.lineWidth = Math.max(2, tileSize * 0.05);
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 22;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + tileSize * 0.34, zoneW * (0.18 + progress * 0.22), tileSize * (0.16 + progress * 0.08), 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#bffcff';
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = detonated ? 20 : 12;
+    for (let i = 0; i < 13; i++) {
+      const plumeNoise = this.noise3D(i * 0.4, progress, phase * 0.2);
+      const x = zoneX + zoneW * (0.13 + i * 0.062) + plumeNoise * tileSize * 0.22;
+      const y1 = zoneY + zoneH * (0.12 + (i % 3) * 0.08);
+      const y2 = zoneY + zoneH * (0.86 - (i % 2) * 0.1);
+      ctx.globalAlpha = intensity * (0.35 + progress * 0.45);
+      ctx.lineWidth = Math.max(1, tileSize * (0.025 + (i % 2) * 0.015));
+      ctx.beginPath();
+      ctx.moveTo(x, y2);
+      ctx.bezierCurveTo(x - tileSize * 0.18, cy, x + tileSize * 0.2, cy, x, y1);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < 11; i++) {
+      const crystalNoise = this.noise2D(i, phase * 0.18);
+      const angle = phase * 0.6 + i * (Math.PI * 2 / 11) + crystalNoise * 0.18;
+      const r = tileSize * (0.45 + (i % 3) * 0.2 + crystalNoise * 0.04) * (detonated ? 1.25 : 1);
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r * 0.7;
+      const spike = tileSize * (0.16 + progress * 0.08);
+      ctx.globalAlpha = intensity * 0.8;
+      ctx.fillStyle = i % 2 === 0 ? '#e8ffff' : '#00e5ff';
+      ctx.beginPath();
+      ctx.moveTo(x, y - spike);
+      ctx.lineTo(x + spike * 0.45, y);
+      ctx.lineTo(x, y + spike);
+      ctx.lineTo(x - spike * 0.45, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  private _drawVolatileEruption(
+    zoneX: number,
+    zoneY: number,
+    zoneW: number,
+    zoneH: number,
+    cx: number,
+    cy: number,
+    progress: number,
+    intensity: number,
+    detonated: boolean
+  ) {
+    const { ctx, tileSize } = this;
+    const phase = this._pulse;
+    ctx.globalCompositeOperation = 'lighter';
+    const blast = ctx.createRadialGradient(cx, cy, tileSize * 0.1, cx, cy, zoneW * 0.72);
+    blast.addColorStop(0, detonated ? 'rgba(255,255,220,1)' : 'rgba(255,140,48,0.52)');
+    blast.addColorStop(0.28, 'rgba(255,45,0,0.68)');
+    blast.addColorStop(0.7, 'rgba(255,0,64,0.3)');
+    blast.addColorStop(1, 'rgba(40,0,0,0)');
+
+    ctx.globalAlpha = intensity * (detonated ? 1 : 0.72);
+    ctx.fillStyle = blast;
+    ctx.fillRect(zoneX, zoneY, zoneW, zoneH);
+
+    ctx.shadowColor = '#ff2a00';
+    ctx.shadowBlur = detonated ? 28 : 14;
+    ctx.globalAlpha = intensity * (0.24 + progress * 0.28);
+    ctx.strokeStyle = '#ffec8a';
+    ctx.lineWidth = Math.max(2, tileSize * 0.06);
+    ctx.beginPath();
+    ctx.arc(cx, cy, tileSize * (0.28 + easeExplode(progress) * 1.1), 0, Math.PI * 2);
+    ctx.stroke();
+
+    for (let i = 0; i < 20; i++) {
+      const rayNoise = this.noise3D(i * 0.25, phase * 0.3, progress);
+      const angle = i * (Math.PI * 2 / 20) + rayNoise * 0.22;
+      const inner = tileSize * (0.25 + progress * 0.18 + rayNoise * 0.03);
+      const outer = tileSize * (0.95 + easeExplode(progress) * 0.85 + Math.abs(rayNoise) * 0.12) * (detonated ? 1.2 : 1);
+      ctx.globalAlpha = intensity * (0.42 + progress * 0.42);
+      ctx.strokeStyle = i % 2 === 0 ? '#ffec8a' : '#ff1744';
+      ctx.lineWidth = Math.max(1.5, tileSize * 0.045);
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+      ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = intensity * (0.28 + progress * 0.4);
+    ctx.fillStyle = '#ff1744';
+    const blocks = detonated ? 28 : 16;
+    for (let i = 0; i < blocks; i++) {
+      const x = zoneX + clamp01(0.5 + this.noise3D(i * 0.3, phase * 0.7, 1) * 0.48) * zoneW;
+      const y = zoneY + clamp01(0.5 + this.noise3D(i * 0.3, phase * 0.65, 7) * 0.48) * zoneH;
+      const s = tileSize * (0.08 + (i % 3) * 0.035) * (detonated ? 1.5 : 1);
+      ctx.fillRect(x - s / 2, y - s / 2, s, s);
+    }
+
+    ctx.globalAlpha = intensity * 0.72;
+    ctx.strokeStyle = '#ff3b5c';
+    ctx.lineWidth = Math.max(1, tileSize * 0.04);
+    ctx.strokeRect(zoneX + tileSize * 0.18, zoneY + tileSize * 0.18, zoneW - tileSize * 0.36, zoneH - tileSize * 0.36);
+    ctx.globalCompositeOperation = 'source-over';
   }
 
 
@@ -835,6 +1220,7 @@ export class Renderer {
     // Ladder interaction visual cue
     if (!player.isOnLadder && state.ladders) {
       const isOnLadderEntrance = state.ladders.some(ladder => {
+        if (ladder.isCollapsed) return false;
         if (!ladder.path_nodes || ladder.path_nodes.length < 2) return false;
         const start = ladder.path_nodes[0];
         const end = ladder.path_nodes[ladder.path_nodes.length - 1];

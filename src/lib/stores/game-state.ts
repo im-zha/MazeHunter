@@ -23,6 +23,7 @@ function createInitialGameState(): GameState {
       isSliding: false,
       slideDir: null,
       freezeTimer: 0,
+      sensorJamTimer: 0,
       mudBlocked: false,
       isOnLadder: false,
     },
@@ -42,6 +43,10 @@ function createInitialGameState(): GameState {
     volatileTimer: 0,
     volatileHot:   new Set<string>(),
     playerInStealth: false,
+    aoeEvents: [],
+    nextAoeMs: 10_000,
+    slagTimer: 0,
+    slagHot: new Set<string>(),
   };
 }
 

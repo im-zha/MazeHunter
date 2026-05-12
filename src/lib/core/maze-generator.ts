@@ -57,7 +57,7 @@ function resolveOptions(options: MazeOptions): Required<MazeOptions> {
     bombCount:    options.bombCount    ?? (round === 1 ? 2    : round === 2 ? 2    : 1),
     // traversal layer
     ladderCount:  options.ladderCount  ?? (round === 1 ? 0    : round === 2 ? 3    : 5),
-    bridgeCount:  options.bridgeCount  ?? (round === 1 ? 0    : round === 2 ? 2    : 4),
+    bridgeCount:  0,
     // hazard layer
     crackCount:   options.crackCount   ?? (round === 1 ? 0    : round === 2 ? 2    : 4),
   };
@@ -244,7 +244,6 @@ export function generateMaze(options: MazeOptions): {
     freezeCount,
     bombCount,
     ladderCount,
-    bridgeCount,
     crackCount,
     round = 1,
   } = resolveOptions(options);
@@ -361,34 +360,6 @@ export function generateMaze(options: MazeOptions): {
 
   // ICE: placed as individual cells
   place(CellType.ICE, Math.floor(placeable.length * iceChance));
-
-  // ---- TRAVERSAL LAYER — BRIDGE (chokepoints) ----
-  if (bridgeCount > 0) {
-    const bridgeCandidates = placeable.filter(p => {
-      if (grid[p.row][p.col] !== CellType.FLOOR) return false;
-      const neighbors = [
-        { r: p.row - 1, c: p.col },
-        { r: p.row + 1, c: p.col },
-        { r: p.row, c: p.col - 1 },
-        { r: p.row, c: p.col + 1 },
-      ].filter(n => n.r >= 0 && n.r < rows && n.c >= 0 && n.c < cols && grid[n.r][n.c] !== CellType.WALL);
-      return neighbors.length === 2;
-    });
-    shuffle(bridgeCandidates, rng);
-    for (let i = 0; i < bridgeCount && i < bridgeCandidates.length; i++) {
-      grid[bridgeCandidates[i].row][bridgeCandidates[i].col] = CellType.BRIDGE;
-    }
-    let placed = Math.min(bridgeCount, bridgeCandidates.length);
-    if (placed < bridgeCount) {
-      while (placed < bridgeCount && idx < placeable.length) {
-        if (grid[placeable[idx].row][placeable[idx].col] === CellType.FLOOR) {
-          grid[placeable[idx].row][placeable[idx].col] = CellType.BRIDGE;
-          placed++;
-        }
-        idx++;
-      }
-    }
-  }
 
   // ---- LADDER LAYER — floating LadderObject entities (not grid tiles) ----
   const ladders = generateLadders(grid, ladderCount, rng, start, exit, round);

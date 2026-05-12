@@ -74,8 +74,7 @@ function pickSpawnPositions(grid: Grid, count: number, playerPos: Pos): Pos[] {
       if (
         cell === CellType.FLOOR ||
         cell === CellType.MUD   ||
-        cell === CellType.ICE   ||
-        cell === CellType.BRIDGE
+        cell === CellType.ICE
       ) {
         const dist = Math.abs(r - playerPos.row) + Math.abs(c - playerPos.col);
         if (dist > 6) floors.push({ row: r, col: c });
@@ -250,7 +249,7 @@ export function getRoundIntro(round: number): { title: string; lines: string[] }
       return {
         title: 'Round 2 — Strategic Depth',
         lines: [
-          '🪜 Ladders connect distant areas · 🌉 Bridges are chokepoints!',
+          '🪜 Ladders connect distant areas',
           '⚠ Hazards: Cracks collapse under your feet',
           'Use items and bombs wisely to survive.',
           'Enemies: + Hunter (A*) · Shadow (DFS)',

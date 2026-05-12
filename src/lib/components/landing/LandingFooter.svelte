@@ -1,6 +1,6 @@
 <!-- LandingFooter.svelte — Tactical footer -->
-<footer class="py-12 border-t border-outline-variant/20">
-  <div class="container mx-auto px-margin flex flex-col md:flex-row justify-between items-center gap-8">
+<footer class="landing-footer py-12">
+  <div class="container mx-auto px-margin flex flex-col md:flex-row justify-between items-center gap-8 footer-inner">
     <!-- Branding -->
     <div class="flex items-center gap-3">
       <div class="size-2 bg-primary"></div>
@@ -39,3 +39,27 @@
     </div>
   </div>
 </footer>
+
+<style>
+  .landing-footer {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, #101213 0%, rgba(8, 9, 10, 0.98) 48%, #07090a 100%);
+    border-top: 0;
+  }
+
+  .landing-footer::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 120px;
+    pointer-events: none;
+    background: linear-gradient(180deg, #101213, rgba(16, 18, 19, 0));
+  }
+
+  .footer-inner {
+    position: relative;
+    z-index: 1;
+  }
+</style>
