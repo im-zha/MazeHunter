@@ -28,13 +28,6 @@ export interface WaveConfig {
     timeLimit: number; // ms per wave (0 = no limit)
 }
 
-// --------------- Base speed per difficulty ---------------
-const BASE_INTERVAL: Record<string, number> = {
-  easy:   550,
-  normal: 380,
-  hard:   240,
-};
-
 // --------------- Round configuration ---------------
 
 /**
@@ -133,14 +126,18 @@ export function buildWave(
 ): EnemyState[] {
   resetEnemyCounter();
 
-  const round = Math.max(1, Math.min(3, wave)); // clamp to 1-3
-  const baseInterval = BASE_INTERVAL[difficulty] ?? BASE_INTERVAL.normal;
-  const roster = [...ROUND_ROSTERS[round - 1]];
+  let rosterIndex = 0;
+  if (difficulty === 'easy') {
+    rosterIndex = wave <= 2 ? 0 : wave <= 4 ? 1 : 2;
+  } else if (difficulty === 'hard') {
+    rosterIndex = wave === 1 ? 1 : 2;
+  } else {
+    rosterIndex = wave === 1 ? 0 : wave === 2 ? 1 : 2;
+  }
+  const roster = [...ROUND_ROSTERS[rosterIndex]];
 
   // --- ENDLESS SCALING ---
-  let baseSize = 21;
-  if (difficulty === 'easy') baseSize = 15;
-  if (difficulty === 'hard') baseSize = 27;
+  const baseSize = 15;
   const MAX_GRID_SIZE = 35;
 
   let roundHitMax = 1;
@@ -162,7 +159,21 @@ export function buildWave(
 
   const spawnPositions = pickSpawnPositions(grid, roster.length, playerPos);
 
-  const roundSpeedFactor = wave >= 3 ? 0.85 : 1.0;
+  let baseInterval = 380;
+  let speedScale = 1.0;
+  
+  if (difficulty === 'easy') {
+    baseInterval = 475; // Base 0.8x
+    speedScale = 1 + 0.05 * (wave - 1);
+  } else if (difficulty === 'hard') {
+    baseInterval = 292; // Base 1.3x
+    speedScale = 1 + 0.15 * (wave - 1);
+  } else {
+    baseInterval = 380; // Base 1.0x
+    speedScale = 1 + 0.10 * (wave - 1);
+  }
+  
+  const roundSpeedFactor = 1 / speedScale;
 
   return roster.map(([algoType, trait], i) => {
     const pos = spawnPositions[i] ?? { row: rows_fallback(grid), col: 1 };
@@ -240,19 +251,19 @@ export function getRoundIntro(round: number): { title: string; lines: string[] }
         title: 'Round 2 — Strategic Depth',
         lines: [
           '🪜 Ladders connect distant areas · 🌉 Bridges are chokepoints!',
-          '⚠ Hazards: Spikes damage · Noise attracts enemies · Cracks collapse',
-          '🗡 Weapon drops appear — each weapon has situational uses!',
-          'Enemies: + Hunter (A*) · Shadow (DFS) with new traits',
+          '⚠ Hazards: Cracks collapse under your feet',
+          'Use items and bombs wisely to survive.',
+          'Enemies: + Hunter (A*) · Shadow (DFS)',
         ],
       };
     case 3:
       return {
         title: 'Round 3 — Chaos Mode',
         lines: [
-          '⏱ Timed events: routes open, bridges collapse, elites spawn!',
-          '💀 ELITE enemies and a MINI BOSS will appear mid-round',
-          '⚠ Resources reduced: fewer bombs, less lives, fewer drops',
-          '🏃 Enemies are FASTER — do not get cornered on bridges!',
+          '⏱ Timed events: map changes and enemy ambushes!',
+          '💀 Advanced Elite variants join the hunt',
+          '⚠ Resources reduced: fewer bombs and lives',
+          '🏃 Enemies are much FASTER and more relentless!',
         ],
       };
     default:

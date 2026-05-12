@@ -628,21 +628,13 @@ export class GameLoop {
     const s    = this._currentSettings;
     const round = wave;
 
-    let baseRows = 21;
-    let baseCols = 21;
-    if (s?.difficulty === 'easy') {
-      baseRows = 15;
-      baseCols = 15;
-    } else if (s?.difficulty === 'hard') {
-      baseRows = 27;
-      baseCols = 27;
-    }
-
+    const baseSize = 15;
     const scaleFactor = Math.floor((round - 1) / 3);
     const MAX_GRID_SIZE = 35;
 
-    let rows = Math.min(baseRows + scaleFactor * 4, MAX_GRID_SIZE);
-    let cols = Math.min(baseCols + scaleFactor * 4, MAX_GRID_SIZE);
+    let size = Math.min(baseSize + scaleFactor * 4, MAX_GRID_SIZE);
+    let rows = size;
+    let cols = size;
     if (rows % 2 === 0) rows++;
     if (cols % 2 === 0) cols++;
 
