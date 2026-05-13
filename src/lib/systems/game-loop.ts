@@ -12,6 +12,7 @@ import {
   type BiomeId,
   type GameState,
   type Pos,
+  type SessionLogType,
 } from '../core/types.js';
 import { InputHandler, Action } from './input-handler.js';
 import { Renderer } from './renderer.js';
@@ -143,6 +144,40 @@ export class GameLoop {
     }
   }
 
+  private _formatRunTime(ms: number) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  private _appendSessionLog(msg: string, type: SessionLogType = 'info') {
+    const elapsedMs = this._state?.timeElapsedMs ?? 0;
+    const entry = {
+      time: this._formatRunTime(elapsedMs),
+      elapsedMs,
+      msg,
+      type,
+    };
+    const logs = [...(this._state.sessionLogs ?? []), entry].slice(-30);
+    this._state = { ...this._state, sessionLogs: logs };
+  }
+
+  private _setEventLabel(msg: string, timer = EVENT_LABEL_MS, type: SessionLogType = 'info') {
+    this._state = {
+      ...this._state,
+      lastEventLabel: msg,
+      eventLabelTimer: timer,
+    };
+    this._appendSessionLog(msg, type);
+  }
+
   restart() {
     cancelAnimationFrame(this._rafId);
     this._initRound(1, true);
@@ -182,6 +217,7 @@ export class GameLoop {
       ...savedState,
       grid: patchedGrid,
       ladders: savedState.ladders ?? [],
+      sessionLogs: savedState.sessionLogs ?? [],
       player: { 
         ...savedState.player, 
         pos: validStartPos,
@@ -251,6 +287,10 @@ export class GameLoop {
   // --------------- Single Tick ---------------
 
   private _tick(dt: number) {
+    this._state = {
+      ...this._state,
+      timeElapsedMs: this._state.timeElapsedMs + dt,
+    };
     this._processInput();
     this._updateEntities(dt);
     this._checkCollisions();
@@ -410,6 +450,7 @@ export class GameLoop {
       grid: newGrid,
       player: { ...player, wallBombs: player.wallBombs - 1 },
     };
+    this._appendSessionLog('WALL BOMB DETONATED', 'warning');
     this._pathInvalidFlag = true;
   }
 
@@ -512,10 +553,7 @@ export class GameLoop {
 
     if (scoreGained > 0) {
       this._state = { ...this._state, score: this._state.score + scoreGained, enemies: updatedEnemies };
-    }
-
-    if (scoreGained > 0) {
-      this._state = { ...this._state, score: this._state.score + scoreGained, enemies: updatedEnemies };
+      this._appendSessionLog(`ENEMY NEUTRALIZED +${scoreGained}`, 'success');
     }
 
     // --- Pickups from grid ---
@@ -534,13 +572,17 @@ export class GameLoop {
       if (cell === CellType.CRYSTAL) {
         newPlayer  = activatePowerUp(player);
         newEnemies = this._state.enemies.map(setFleeMode);
+        this._setEventLabel('POWER CRYSTAL ENGAGED', EVENT_LABEL_MS, 'crystal');
       } else if (cell === CellType.FREEZE_CLOCK) {
         newPlayer = activateFreeze(player);
+        this._setEventLabel('FREEZE CLOCK ACTIVATED', EVENT_LABEL_MS, 'info');
       } else if (cell === CellType.BOMB_PICKUP) {
         if (player.wallBombs < 5) {
           newPlayer = { ...player, wallBombs: player.wallBombs + 1 };
+          this._appendSessionLog('WALL BOMB ACQUIRED', 'info');
         } else {
           this._state = { ...this._state, score: this._state.score + 200 };
+          this._appendSessionLog('BOMB CACHE CONVERTED +200', 'success');
         }
       }
 
@@ -721,6 +763,7 @@ export class GameLoop {
     if (result.eventLabel) {
       label      = result.eventLabel;
       labelTimer = 3_000;
+      this._appendSessionLog(result.eventLabel, 'warning');
     }
 
     this._state = {
@@ -747,6 +790,8 @@ export class GameLoop {
     }
     this._state = { ...this._state, volatileHot: hot, lastEventLabel: '🔥 VOLATILE DETONATION!', eventLabelTimer: 2500 };
 
+    this._appendSessionLog('VOLATILE DETONATION!', 'warning');
+
     if (hot.has(`${player.pos.row},${player.pos.col}`)) {
       this._loseLife();
     }
@@ -758,6 +803,7 @@ export class GameLoop {
     this._waveTimeMs += dt;
     const limit = getWaveTimeLimit(this._state.wave);
     if (limit > 0 && this._waveTimeMs >= limit) {
+      this._appendSessionLog('ROUND TIMER EXPIRED', 'warning');
       this._loseLife();
     }
   }
@@ -783,6 +829,7 @@ export class GameLoop {
       enemies  = result.enemies;
       label    = ev.label;
       labelTimer = EVENT_LABEL_MS;
+      this._appendSessionLog(ev.label, 'info');
       changed  = true;
 
       // Ladder spawned via timed event
@@ -834,12 +881,14 @@ export class GameLoop {
     const lives = this._state.lives - 1;
     if (lives <= 0) {
       this._state = { ...this._state, lives: 0, phase: GamePhase.GAME_OVER };
+      this._appendSessionLog('OPERATOR DOWN - GAME OVER', 'error');
     } else {
       this._state = {
         ...this._state,
         lives,
         player: createPlayer({ row: 1, col: 1 }, getRoundBombs(this._state.round)),
       };
+      this._appendSessionLog(`OPERATOR HIT - ${lives} LIVES REMAINING`, 'error');
     }
     this._pushState();
   }
@@ -851,6 +900,7 @@ export class GameLoop {
     const nextWave = this._state.wave + 1;
 
     this._state = { ...this._state, score: newScore };
+    this._appendSessionLog(`ROUND ${this._state.round} CLEARED +${bonus}`, 'success');
     this._initRound(nextWave, false);
   }
 
@@ -905,6 +955,8 @@ export class GameLoop {
     }
 
     const lives   = isRestart ? getRoundLives(round) : (this._state?.lives ?? getRoundLives(round));
+    const timeElapsedMs = isRestart ? 0 : (this._state?.timeElapsedMs ?? 0);
+    const sessionLogs = isRestart ? [] : (this._state?.sessionLogs ?? []);
     
     let bombs = getRoundBombs(round);
     if (!isRestart && this._state && this._state.player) {
@@ -924,7 +976,7 @@ export class GameLoop {
       round,
       wave,
       lives,
-      timeElapsedMs: 0,
+      timeElapsedMs,
       debugMode: false,
       fogEnabled: s?.fogEnabled ?? true,
       player,
@@ -934,6 +986,7 @@ export class GameLoop {
       timedEvents,
       lastEventLabel: '',
       eventLabelTimer: 0,
+      sessionLogs,
       bridgeOccupancy: {},
       // Biome
       selectedBiome,
@@ -952,6 +1005,7 @@ export class GameLoop {
     this._canvas.width  = window.innerWidth;
     this._canvas.height = window.innerHeight;
 
+    this._appendSessionLog(`ROUND ${round} START - ${themeConfig.label}`, 'info');
     this._pushState();
   }
 

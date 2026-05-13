@@ -72,13 +72,7 @@
   const aoeWarning = $derived(aoeEvents.filter(e => !e.detonated));
 
   /** Event log — static sample entries */
-  const systemLogs: { time: string; msg: string; type: 'info' | 'error' | 'crystal' }[] = [
-    { time: '12:43:55', msg: 'SYS_INIT SEC_OK',        type: 'info'    },
-    { time: '12:43:58', msg: 'ALGORITHM: A* PATHING',  type: 'info'    },
-    { time: '12:44:00', msg: 'ENTITY SCANNED.',         type: 'info'    },
-    { time: '12:44:02', msg: 'GHOST AI DETECTED',       type: 'error'   },
-    { time: '12:44:10', msg: 'CRYSTAL ENGAGED',         type: 'crystal' },
-  ];
+  const sessionLogs = $derived([...(state.sessionLogs ?? [])].slice(-8).reverse());
 
   /** Pad round number */
   function padRound(n: number) {
@@ -336,7 +330,7 @@
       </div>
 
       <div class="flex-1 overflow-y-auto flex flex-col gap-1 font-data-sm text-data-sm">
-        {#each systemLogs as log}
+        {#each sessionLogs as log}
           {#if log.type === 'error'}
             <div class="text-error bg-error-container/10 px-1 border-l-2 border-error">
               <span class="text-error/70">[{log.time}]</span>
@@ -347,6 +341,16 @@
               <span class="text-primary/70">[{log.time}]</span>
               {log.msg}
             </div>
+          {:else if log.type === 'success'}
+            <div class="text-green-300 bg-green-400/10 px-1 border-l-2 border-green-300 mt-1">
+              <span class="text-green-300/70">[{log.time}]</span>
+              {log.msg}
+            </div>
+          {:else if log.type === 'warning'}
+            <div class="text-secondary bg-secondary/10 px-1 border-l-2 border-secondary mt-1">
+              <span class="text-secondary/70">[{log.time}]</span>
+              {log.msg}
+            </div>
           {:else}
             <div class="text-on-surface-variant">
               <span class="text-outline">[{log.time}]</span>
@@ -355,11 +359,10 @@
           {/if}
         {/each}
 
-        <!-- Dynamic last event from game store -->
-        {#if state.lastEventLabel}
-          <div class="text-secondary bg-secondary/10 px-1 border-l-2 border-secondary mt-1">
-            <span class="text-secondary/70">[LIVE]</span>
-            {state.lastEventLabel}
+        {#if sessionLogs.length === 0}
+          <div class="text-on-surface-variant/60">
+            <span class="text-outline">[00:00]</span>
+            AWAITING SESSION EVENTS
           </div>
         {/if}
       </div>

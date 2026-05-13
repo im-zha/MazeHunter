@@ -280,6 +280,15 @@ export interface AoeEvent {
   flashMs: number;
 }
 
+export type SessionLogType = 'info' | 'warning' | 'error' | 'crystal' | 'success';
+
+export interface SessionLogEntry {
+  time: string;
+  elapsedMs: number;
+  msg: string;
+  type: SessionLogType;
+}
+
 // --------------- Game State ---------------
 
 /** Interface đại diện cho GameState. */
@@ -308,6 +317,8 @@ export interface GameState {
   lastEventLabel: string;
   /** ms remaining to show lastEventLabel. */
   eventLabelTimer: number;
+  /** Runtime notification history shown in the HUD session log. */
+  sessionLogs: SessionLogEntry[];
   /** Whether fog of war is enabled */
   fogEnabled: boolean;
   /** Whether the debug overlay is currently active. */

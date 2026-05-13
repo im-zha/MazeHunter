@@ -33,6 +33,7 @@ function createInitialGameState(): GameState {
     timedEvents: [],
     lastEventLabel: '',
     eventLabelTimer: 0,
+    sessionLogs: [],
     fogEnabled: DEFAULT_SETTINGS.fogEnabled,
     debugMode: false,
     bridgeOccupancy: {},

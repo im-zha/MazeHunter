@@ -234,6 +234,8 @@ export function calcWaveScore(wave: number, timeRemainingMs: number): number {
  * Round intro text shown before each round starts.
  */
 export function getRoundIntro(round: number): { title: string; lines: string[] } {
+  return { title: `Round ${round}`, lines: [] };
+
   switch (round) {
     case 1:
       return {
