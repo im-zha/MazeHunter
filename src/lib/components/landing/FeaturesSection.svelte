@@ -13,35 +13,35 @@
       title: 'Algorithmic Hunters',
       desc: 'Enemies pursue with BFS, Dijkstra, A*, and DFS behavior, then flip into flee states when power crystals turn the chase around.',
       tag: 'BFS / Dijkstra / A* / DFS',
-      color: '#60a5fa',
+      color: '#7ddbd2',
     },
     {
       icon: 'public',
       title: 'Biome Rule Sets',
       desc: 'Data Jungle hides you in stealth growth, Cooling Sea bends movement through data streams, and Lava Core turns routes unstable.',
       tag: '3 tactical sectors',
-      color: '#00ffff',
+      color: '#6ffbbe',
     },
     {
       icon: 'crisis_alert',
       title: 'Tactical AoE Events',
       desc: 'Cyber-Spore Bloom, Cryo-Geyser, and Volatile Eruption telegraph danger before the map detonates into biome-specific effects.',
       tag: 'Warning then impact',
-      color: '#ff5b35',
+      color: '#ffb95f',
     },
     {
       icon: 'vertical_align_center',
       title: 'Thermal Elevators',
       desc: 'Lava Core elevator tiles shake, collapse after a random delay, and regenerate five seconds later, forcing fast route decisions.',
       tag: 'Collapse cycle',
-      color: '#ffb95f',
+      color: '#ff7a73',
     },
     {
       icon: 'military_tech',
       title: 'Operator Records',
       desc: 'Players register before deployment, final runs are saved to SQLite, and the leaderboard ranks score, wave, sector, and outcome.',
       tag: 'SQLite leaderboard',
-      color: '#b88cff',
+      color: '#bbcabf',
     },
   ] as const;
 </script>
@@ -77,12 +77,19 @@
 
 <style>
   .mechanics-section {
+    --hero-primary: #4edea3;
+    --hero-cyan: #7ddbd2;
+    --silver-white: #f8fafc;
+    --primary-line: rgba(78, 222, 163, 0.3);
+    --deep-surface: rgba(8, 22, 15, 0.82);
     position: relative;
     padding: 118px 24px 112px;
     background:
-      linear-gradient(180deg, #111315 0%, rgba(11, 12, 13, 0.98) 22%, rgba(8, 9, 10, 0.98) 78%, #141617 100%),
-      radial-gradient(circle at 20% 10%, rgba(78, 222, 163, 0.09), transparent 30%),
-      linear-gradient(180deg, #111315 0%, #08090a 100%);
+      radial-gradient(circle at 50% 4%, rgba(78, 222, 163, 0.18), transparent 38%),
+      radial-gradient(circle at 10% 46%, rgba(125, 219, 210, 0.1), transparent 30%),
+      radial-gradient(circle at 90% 62%, rgba(78, 222, 163, 0.08), transparent 26%),
+      linear-gradient(180deg, #07090a 0%, #0a1b13 24%, #07090a 78%, #07120d 100%),
+      #07090a;
     color: #fff;
     overflow: hidden;
   }
@@ -100,12 +107,12 @@
 
   .mechanics-section::before {
     top: 0;
-    background: linear-gradient(180deg, #111315, rgba(17, 19, 21, 0));
+    background: linear-gradient(180deg, #07090a, rgba(7, 9, 10, 0));
   }
 
   .mechanics-section::after {
     bottom: 0;
-    background: linear-gradient(180deg, rgba(20, 22, 23, 0), #141617);
+    background: linear-gradient(180deg, rgba(7, 9, 10, 0), #07120d);
   }
 
   .mechanics-inner {
@@ -125,10 +132,11 @@
 
   .eyebrow {
     margin: 0 0 10px;
-    color: #4edea3;
+    color: var(--silver-white);
     font: 900 10px 'Outfit', sans-serif;
     letter-spacing: 0.22em;
     text-transform: uppercase;
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.18);
   }
 
   h2 {
@@ -136,29 +144,36 @@
     font: 900 clamp(34px, 7vw, 68px) / 0.9 'Outfit', sans-serif;
     text-transform: uppercase;
     letter-spacing: 0;
+    color: #fff;
+    text-shadow:
+      0 0 8px rgba(255, 255, 255, 0.42),
+      0 0 30px rgba(78, 222, 163, 0.34);
   }
 
   .summary {
     margin: 0;
-    color: rgba(255, 255, 255, 0.58);
+    color: rgba(248, 250, 252, 0.66);
     font: 600 15px / 1.55 'Outfit', sans-serif;
   }
 
   .mechanics-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    border: 1px solid var(--primary-line);
+    box-shadow: 0 0 34px rgba(78, 222, 163, 0.12);
   }
 
   .mechanic-card {
     position: relative;
     min-height: 265px;
     padding: 24px;
-    border-right: 1px solid rgba(255, 255, 255, 0.09);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(255, 255, 255, 0.025);
+    border-right: 1px solid rgba(78, 222, 163, 0.18);
+    border-bottom: 1px solid rgba(78, 222, 163, 0.18);
+    background:
+      linear-gradient(180deg, rgba(78, 222, 163, 0.075), rgba(125, 219, 210, 0.018)),
+      var(--deep-surface);
     overflow: hidden;
-    transition: background 0.16s ease, transform 0.16s ease;
+    transition: background 0.16s ease, transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
   }
 
   .mechanic-card:nth-child(3n) {
@@ -178,12 +193,32 @@
     opacity: 0.85;
   }
 
+  .mechanic-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--mechanic-color) 8%, transparent), transparent 42%),
+      radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--mechanic-color) 12%, transparent), transparent 26%);
+    opacity: 0.78;
+  }
+
   .mechanic-card:hover {
-    background: color-mix(in srgb, var(--mechanic-color) 9%, rgba(255, 255, 255, 0.03));
+    border-color: #6ffbbe;
+    background:
+      linear-gradient(180deg, rgba(78, 222, 163, 0.14), rgba(125, 219, 210, 0.04)),
+      rgba(8, 24, 16, 0.94);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--mechanic-color) 18%, transparent),
+      0 0 20px rgba(78, 222, 163, 0.34),
+      0 16px 34px rgba(0, 0, 0, 0.26);
     transform: translateY(-3px);
   }
 
   .card-head {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -202,12 +237,16 @@
     width: 46px;
     height: 46px;
     border: 1px solid color-mix(in srgb, var(--mechanic-color) 45%, transparent);
-    color: var(--mechanic-color);
-    background: color-mix(in srgb, var(--mechanic-color) 8%, transparent);
+    color: color-mix(in srgb, var(--mechanic-color) 78%, #fff);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--mechanic-color) 16%, transparent), rgba(78, 222, 163, 0.03));
+    box-shadow: inset 0 0 18px color-mix(in srgb, var(--mechanic-color) 12%, transparent);
     font-size: 27px;
   }
 
   h3 {
+    position: relative;
+    z-index: 1;
     margin: 0 0 12px;
     color: #fff;
     font: 900 20px / 1.08 'Outfit', sans-serif;
@@ -216,12 +255,15 @@
   }
 
   .mechanic-card p {
+    position: relative;
+    z-index: 1;
     margin: 0;
     color: rgba(255, 255, 255, 0.58);
     font: 600 13px / 1.55 'Outfit', sans-serif;
   }
 
   .tag {
+    z-index: 1;
     position: absolute;
     left: 24px;
     right: 24px;
@@ -244,7 +286,7 @@
     .mechanic-card:nth-child(3n),
     .mechanic-card:nth-last-child(-n + 3) {
       border-right: none;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+      border-bottom: 1px solid rgba(78, 222, 163, 0.18);
     }
 
     .mechanic-card:last-child {

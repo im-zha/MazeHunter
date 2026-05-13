@@ -159,7 +159,7 @@
   {/if}
 
   {#if showInstructions}
-    <InstructionsModal on:close={() => showInstructions = false} />
+    <InstructionsModal biome={gs.currentBiome} on:close={() => showInstructions = false} />
   {/if}
 
   {#if canRenderGame}

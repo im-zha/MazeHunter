@@ -52,8 +52,8 @@
 
   const sectorSignals = [
     { label: 'Data Jungle', detail: 'Cyber-Spore Bloom', color: '#4edea3' },
-    { label: 'Cooling Sea', detail: 'Cryo-Geyser', color: '#00ffff' },
-    { label: 'Lava Core', detail: 'Volatile Eruption', color: '#ff5b35' },
+    { label: 'Cooling Sea', detail: 'Cryo-Geyser', color: '#7ddbd2' },
+    { label: 'Lava Core', detail: 'Volatile Eruption', color: '#ffb95f' },
   ] as const;
 </script>
 
@@ -120,12 +120,20 @@
 
 <style>
   .mission-hub {
+    --hero-primary: #4edea3;
+    --hero-cyan: #7ddbd2;
+    --silver-white: #f8fafc;
+    --primary-soft: rgba(78, 222, 163, 0.14);
+    --primary-line: rgba(78, 222, 163, 0.3);
+    --deep-surface: rgba(8, 22, 15, 0.86);
     position: relative;
     padding: 118px 24px 104px;
     background:
-      linear-gradient(180deg, #080a0c 0%, rgba(8, 10, 12, 0.94) 14%, rgba(11, 13, 15, 0.98) 78%, #111315 100%),
-      linear-gradient(180deg, rgba(6, 10, 12, 0.96), rgba(13, 14, 16, 0.98)),
-      #080a0c;
+      radial-gradient(circle at 25% 12%, rgba(78, 222, 163, 0.2), transparent 34%),
+      radial-gradient(circle at 78% 22%, rgba(125, 219, 210, 0.12), transparent 32%),
+      radial-gradient(circle at 50% 78%, rgba(78, 222, 163, 0.075), transparent 34%),
+      linear-gradient(180deg, #07120d 0%, #0a1b13 24%, #07090a 76%, #07120d 100%),
+      #07090a;
     border-top: 0;
     border-bottom: 0;
     color: #fff;
@@ -145,12 +153,12 @@
 
   .mission-hub::before {
     top: 0;
-    background: linear-gradient(180deg, rgba(8, 10, 12, 0.98), rgba(8, 10, 12, 0));
+    background: linear-gradient(180deg, #07120d, rgba(7, 18, 13, 0));
   }
 
   .mission-hub::after {
     bottom: 0;
-    background: linear-gradient(180deg, rgba(17, 19, 21, 0), #111315);
+    background: linear-gradient(180deg, rgba(7, 18, 13, 0), #07090a);
   }
 
   .hub-inner {
@@ -171,10 +179,11 @@
   .eyebrow,
   .panel-kicker {
     margin: 0 0 8px;
-    color: #4edea3;
+    color: var(--silver-white);
     font: 900 10px 'Outfit', sans-serif;
     letter-spacing: 0.22em;
     text-transform: uppercase;
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.18);
   }
 
   h2 {
@@ -182,6 +191,10 @@
     font: 900 clamp(32px, 6vw, 58px) / 0.92 'Outfit', sans-serif;
     text-transform: uppercase;
     letter-spacing: 0;
+    color: #fff;
+    text-shadow:
+      0 0 8px rgba(255, 255, 255, 0.42),
+      0 0 28px rgba(78, 222, 163, 0.34);
   }
 
   .hub-status {
@@ -190,9 +203,9 @@
     gap: 10px;
     min-height: 40px;
     padding: 0 14px;
-    border: 1px solid rgba(78, 222, 163, 0.26);
-    background: rgba(78, 222, 163, 0.06);
-    color: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--primary-line);
+    background: rgba(78, 222, 163, 0.08);
+    color: rgba(248, 250, 252, 0.8);
     font: 800 11px 'Outfit', sans-serif;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -201,8 +214,8 @@
   .status-dot {
     width: 8px;
     height: 8px;
-    background: #4edea3;
-    box-shadow: 0 0 12px #4edea3;
+    background: var(--hero-primary);
+    box-shadow: 0 0 12px var(--hero-primary);
   }
 
   .hub-grid {
@@ -213,15 +226,19 @@
 
   .command-panel,
   .action-card {
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--primary-line);
+    background:
+      linear-gradient(180deg, rgba(78, 222, 163, 0.08), rgba(125, 219, 210, 0.018)),
+      var(--deep-surface);
   }
 
   .command-panel {
     min-height: 100%;
     padding: 22px;
-    border-top: 3px solid #4edea3;
-    box-shadow: inset 0 0 32px rgba(78, 222, 163, 0.05);
+    border-top: 3px solid var(--hero-primary);
+    box-shadow:
+      inset 0 0 38px rgba(78, 222, 163, 0.1),
+      0 0 30px rgba(78, 222, 163, 0.12);
   }
 
   .panel-top {
@@ -236,9 +253,10 @@
     place-items: center;
     width: 48px;
     height: 48px;
-    border: 1px solid rgba(78, 222, 163, 0.34);
-    color: #4edea3;
-    background: rgba(78, 222, 163, 0.08);
+    border: 1px solid rgba(78, 222, 163, 0.42);
+    color: #b8ffe0;
+    background: rgba(78, 222, 163, 0.1);
+    box-shadow: inset 0 0 18px rgba(78, 222, 163, 0.12);
   }
 
   .panel-top h3 {
@@ -246,6 +264,8 @@
     font: 900 23px / 1 'Outfit', sans-serif;
     text-transform: uppercase;
     letter-spacing: 0;
+    color: #fff;
+    text-shadow: 0 0 14px rgba(255, 255, 255, 0.2);
   }
 
   .sector-list {
@@ -260,7 +280,10 @@
     align-items: center;
     min-height: 64px;
     padding: 12px;
-    background: color-mix(in srgb, var(--signal-color) 8%, rgba(0, 0, 0, 0.18));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--signal-color) 14%, transparent), transparent 72%),
+      linear-gradient(180deg, rgba(78, 222, 163, 0.06), rgba(125, 219, 210, 0.018)),
+      rgba(8, 22, 15, 0.84);
     border-left: 2px solid var(--signal-color);
   }
 
@@ -308,7 +331,10 @@
     text-align: left;
     cursor: pointer;
     overflow: hidden;
-    transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    box-shadow:
+      inset 0 0 0 1px rgba(78, 222, 163, 0.06),
+      0 10px 28px rgba(0, 0, 0, 0.18);
+    transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
   }
 
   .action-card::before {
@@ -322,8 +348,14 @@
 
   .action-card:hover {
     transform: translateY(-4px);
-    border-color: color-mix(in srgb, var(--tone-color) 60%, transparent);
-    background: color-mix(in srgb, var(--tone-color) 10%, rgba(255, 255, 255, 0.04));
+    border-color: #6ffbbe;
+    background:
+      linear-gradient(180deg, rgba(78, 222, 163, 0.14), rgba(125, 219, 210, 0.04)),
+      rgba(8, 24, 16, 0.96);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--tone-color) 22%, transparent),
+      0 0 20px rgba(78, 222, 163, 0.34),
+      0 16px 32px rgba(0, 0, 0, 0.28);
   }
 
   .action-card:disabled {
@@ -333,7 +365,7 @@
   }
 
   .tone-primary { --tone-color: #4edea3; }
-  .tone-cyan { --tone-color: #00ffff; }
+  .tone-cyan { --tone-color: #7ddbd2; }
   .tone-amber { --tone-color: #ffb95f; }
 
   .action-index {
@@ -349,8 +381,10 @@
     place-items: center;
     margin: 24px 0 20px;
     border: 1px solid color-mix(in srgb, var(--tone-color) 42%, transparent);
-    color: var(--tone-color);
-    background: color-mix(in srgb, var(--tone-color) 9%, transparent);
+    color: color-mix(in srgb, var(--tone-color) 78%, #fff);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--tone-color) 16%, transparent), rgba(78, 222, 163, 0.03));
+    box-shadow: inset 0 0 18px color-mix(in srgb, var(--tone-color) 12%, transparent);
     font-size: 28px;
   }
 

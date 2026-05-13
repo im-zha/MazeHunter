@@ -11,8 +11,10 @@
   import FeaturesSection from '$lib/components/landing/FeaturesSection.svelte';
   import AIArchetypes    from '$lib/components/landing/AIArchetypes.svelte';
   import LandingFooter   from '$lib/components/landing/LandingFooter.svelte';
+  import FieldManualModal from '$lib/components/landing/FieldManualModal.svelte';
 
   let hasSave = $state(false);
+  let showFieldManual = $state(false);
 
   onMount(() => {
     hasSave = !!localStorage.getItem('mazehunter_save');
@@ -66,7 +68,7 @@
       {hasSave}
       onContinue={continueGame}
       onLeaderboard={() => goto('/leaderboard')}
-      onHowToPlay={() => {}}
+      onHowToPlay={() => (showFieldManual = true)}
     />
 
     <FeaturesSection />
@@ -75,4 +77,8 @@
   </main>
 
   <LandingFooter />
+
+  {#if showFieldManual}
+    <FieldManualModal onClose={() => (showFieldManual = false)} />
+  {/if}
 </div>

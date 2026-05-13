@@ -228,7 +228,7 @@
 {#if showModal}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+    class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 bg-black/80 backdrop-blur-md sm:items-center"
     onclick={(e) => {
       if (e.target === e.currentTarget) showModal = false;
     }}
@@ -428,6 +428,10 @@
       0 0 60px rgba(0, 0, 0, 0.9),
       0 0 30px color-mix(in srgb, var(--accent, #4edea3) 20%, transparent);
     animation: modal-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 32px);
+    overflow: hidden;
   }
   @keyframes modal-in {
     from {
@@ -442,6 +446,7 @@
 
   /* ── Header ───────────────────────────────────────────────────────────── */
   .modal-header {
+    flex: 0 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -487,6 +492,9 @@
 
   /* ── Body ─────────────────────────────────────────────────────────────── */
   .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
     padding: 24px 32px;
     display: flex;
     flex-direction: column;
@@ -681,6 +689,7 @@
 
   /* ── Footer ───────────────────────────────────────────────────────────── */
   .modal-footer {
+    flex: 0 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;

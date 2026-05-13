@@ -15,7 +15,7 @@
     subtitle: string;
     desc: string;
     tip: string;
-    tileType: "stealth" | "stealth_vine" | "toxic_moss" | "hardlight_bridge" | "conveyor_up" | "deep_coolant" | "frozen_floor" | "ventilation_shaft" | "volatile" | "melted_slag" | "scorched_glass" | "elevator" | "aoe" | "shuffle";
+    tileType: "stealth" | "stealth_vine" | "toxic_moss" | "hardlight_bridge" | "conveyor_up" | "conveyor_down" | "deep_coolant" | "frozen_floor" | "ventilation_shaft" | "volatile" | "melted_slag" | "scorched_glass" | "elevator" | "crystal" | "aoe" | "shuffle";
     animKey: string; // for CSS animation
   }
 
@@ -170,6 +170,10 @@
     if (!isLast) currentPage++;
   }
 
+  function previous() {
+    if (currentPage > 0) currentPage--;
+  }
+
   $effect(() => {
     // reset page when biome changes
     biomeId;
@@ -258,22 +262,94 @@
             <polygon points="16,8 22,16 16,24 10,16" fill="#ff6eb4" opacity="0.5"/>
           </svg>
         {:else if page.tileType === "aoe"}
-          <!-- 3×3 AoE warning grid with center cell highlighted -->
-          <svg viewBox="0 0 32 32" class="tile-svg">
-            <rect width="32" height="32" fill="#0a0a0a"/>
-            {#each [0,1,2] as row}
-              {#each [0,1,2] as col}
-                <rect
-                  x={col*10+1} y={row*10+1} width="9" height="9"
-                  fill={row===1&&col===1 ? 'var(--demo-color)' : 'transparent'}
-                  stroke="var(--demo-color)"
-                  stroke-width="0.8"
-                  opacity={row===1&&col===1 ? 0.9 : 0.45}
-                  class="aoe-cell-svg"
-                  style="animation-delay:{(row*3+col)*0.09}s"
-                />
+          <svg viewBox="0 0 96 96" class="tile-svg aoe-svg aoe-svg--{biomeId}" aria-hidden="true">
+            <defs>
+              <radialGradient id="spore-mist" cx="50%" cy="50%" r="72%">
+                <stop offset="0%" stop-color="#4edea3" stop-opacity="0.45"/>
+                <stop offset="45%" stop-color="#39ff14" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#041e0e" stop-opacity="0"/>
+              </radialGradient>
+              <linearGradient id="cryo-plume" x1="48" y1="90" x2="48" y2="4" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#00ffff" stop-opacity="0.08"/>
+                <stop offset="45%" stop-color="#00e5ff" stop-opacity="0.58"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+              <radialGradient id="eruption-blast" cx="50%" cy="50%" r="72%">
+                <stop offset="0%" stop-color="#ffec8a" stop-opacity="0.85"/>
+                <stop offset="28%" stop-color="#ff2d00" stop-opacity="0.68"/>
+                <stop offset="70%" stop-color="#ff0040" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#280000" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+
+            <rect width="96" height="96" fill="#050607"/>
+            <g class="aoe-zone-grid">
+              {#each [0,1,2] as row}
+                {#each [0,1,2] as col}
+                  <rect x={col*30+3} y={row*30+3} width="28" height="28" />
+                {/each}
               {/each}
-            {/each}
+            </g>
+
+            {#if biomeId === "data_jungle"}
+              <rect class="aoe-mist" x="3" y="3" width="90" height="90" fill="url(#spore-mist)"/>
+              <g class="spore-wisps">
+                <path d="M12 24 C30 8 60 40 84 22"/>
+                <path d="M10 44 C30 28 62 62 86 42"/>
+                <path d="M12 66 C34 48 58 82 84 64"/>
+              </g>
+              <g class="spore-dots">
+                <circle cx="29" cy="31" r="3.2"/>
+                <circle cx="51" cy="20" r="2.3"/>
+                <circle cx="67" cy="36" r="2.8"/>
+                <circle cx="37" cy="57" r="2.6"/>
+                <circle cx="60" cy="62" r="3.4"/>
+                <circle cx="47" cy="44" r="4.2"/>
+                <circle cx="73" cy="71" r="2.2"/>
+                <circle cx="22" cy="70" r="2.6"/>
+              </g>
+            {:else if biomeId === "cooling_sea"}
+              <ellipse class="cryo-plume" cx="48" cy="50" rx="25" ry="44" fill="url(#cryo-plume)"/>
+              <ellipse class="cryo-ring" cx="48" cy="60" rx="25" ry="8"/>
+              <g class="cryo-streams">
+                <path d="M24 75 C18 52 31 38 27 18"/>
+                <path d="M38 80 C31 54 47 36 42 13"/>
+                <path d="M53 82 C45 58 61 36 57 14"/>
+                <path d="M70 76 C63 55 76 39 72 20"/>
+              </g>
+              <g class="cryo-crystals">
+                <path d="M33 32 L38 42 L33 52 L28 42 Z"/>
+                <path d="M64 28 L69 39 L64 50 L59 39 Z"/>
+                <path d="M48 58 L54 70 L48 82 L42 70 Z"/>
+                <path d="M71 65 L75 73 L71 81 L67 73 Z"/>
+              </g>
+            {:else}
+              <rect class="eruption-blast" x="3" y="3" width="90" height="90" fill="url(#eruption-blast)"/>
+              <circle class="eruption-ring" cx="48" cy="48" r="22"/>
+              <g class="eruption-rays">
+                <line x1="48" y1="48" x2="48" y2="12"/>
+                <line x1="48" y1="48" x2="76" y2="18"/>
+                <line x1="48" y1="48" x2="84" y2="49"/>
+                <line x1="48" y1="48" x2="74" y2="78"/>
+                <line x1="48" y1="48" x2="48" y2="86"/>
+                <line x1="48" y1="48" x2="18" y2="76"/>
+                <line x1="48" y1="48" x2="12" y2="48"/>
+                <line x1="48" y1="48" x2="20" y2="18"/>
+              </g>
+              <g class="eruption-blocks">
+                <rect x="29" y="24" width="7" height="7"/>
+                <rect x="65" y="33" width="6" height="6"/>
+                <rect x="54" y="68" width="8" height="8"/>
+                <rect x="24" y="60" width="5" height="5"/>
+                <rect x="42" y="41" width="9" height="9"/>
+              </g>
+            {/if}
+
+            <g class="aoe-crosshair">
+              <line x1="20" y1="48" x2="76" y2="48"/>
+              <line x1="48" y1="20" x2="48" y2="76"/>
+            </g>
+            <text class="aoe-countdown" x="48" y="55" text-anchor="middle">3</text>
           </svg>
         {:else if page.tileType === "stealth_vine"}
           <!-- MUD data_jungle: #0b2415 + #39ff14 wavy vines -->
@@ -388,6 +464,11 @@
 
   <!-- Footer buttons -->
   <div class="demo-footer">
+    {#if currentPage > 0}
+      <button class="btn-back" onclick={previous} id="demo-back-btn">
+        <span class="btn-arrow btn-arrow--back">←</span> BACK
+      </button>
+    {/if}
     {#if !isLast}
       <button class="btn-next" onclick={next} id="demo-next-btn">
         NEXT <span class="btn-arrow">→</span>
@@ -550,10 +631,140 @@
   }
 
   /* AoE cell — staggered blink */
-  .aoe-cell-svg { animation: aoe-blink 1.2s ease-in-out infinite; }
+  .aoe-svg {
+    filter: saturate(1.12);
+  }
+
+  .aoe-zone-grid rect {
+    fill: transparent;
+    stroke: var(--demo-color);
+    stroke-width: 1.6;
+    opacity: 0.28;
+    animation: aoe-blink 1.1s ease-in-out infinite;
+  }
+
+  .aoe-zone-grid rect:nth-child(5) {
+    fill: color-mix(in srgb, var(--demo-color) 25%, transparent);
+    opacity: 0.72;
+  }
+
+  .aoe-mist,
+  .cryo-plume,
+  .eruption-blast {
+    animation: aoe-breathe 1.2s ease-in-out infinite;
+  }
+
+  .aoe-crosshair {
+    stroke: var(--demo-color);
+    stroke-width: 2;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 5px var(--demo-color));
+    animation: aoe-blink 0.82s ease-in-out infinite;
+  }
+
+  .aoe-countdown {
+    fill: #fff;
+    font-family: "Outfit", sans-serif;
+    font-size: 25px;
+    font-weight: 900;
+    filter: drop-shadow(0 0 5px var(--demo-color));
+  }
+
+  .spore-dots {
+    fill: #39ff14;
+    filter: drop-shadow(0 0 4px #39ff14);
+    animation: spore-orbit 3.2s ease-in-out infinite;
+    transform-origin: 48px 48px;
+  }
+
+  .spore-wisps {
+    fill: none;
+    stroke: #7aff9e;
+    stroke-width: 1.3;
+    opacity: 0.45;
+    filter: drop-shadow(0 0 4px #39ff14);
+  }
+
+  .cryo-ring {
+    fill: none;
+    stroke: #e8ffff;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px #00ffff);
+    animation: cryo-ring 1.35s ease-in-out infinite;
+  }
+
+  .cryo-streams {
+    fill: none;
+    stroke: #bffcff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.72;
+    filter: drop-shadow(0 0 5px #00ffff);
+  }
+
+  .cryo-crystals {
+    fill: #e8ffff;
+    filter: drop-shadow(0 0 4px #00e5ff);
+    animation: cryo-crystal-float 1.8s ease-in-out infinite;
+  }
+
+  .eruption-ring {
+    fill: none;
+    stroke: #ffec8a;
+    stroke-width: 4;
+    filter: drop-shadow(0 0 6px #ff2a00);
+    animation: eruption-ring 0.95s ease-in-out infinite;
+  }
+
+  .eruption-rays {
+    stroke: #ffec8a;
+    stroke-width: 4;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 5px #ff2a00);
+    animation: eruption-rays 0.95s ease-in-out infinite;
+  }
+
+  .eruption-rays line:nth-child(even) {
+    stroke: #ff1744;
+  }
+
+  .eruption-blocks {
+    fill: #ff1744;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 4px #ff2a00);
+    animation: eruption-blocks 1.05s steps(2, end) infinite;
+  }
   @keyframes aoe-blink {
     0%, 100% { opacity: 0.3; }
     50%       { opacity: 1;   }
+  }
+  @keyframes aoe-breathe {
+    0%, 100% { opacity: 0.55; transform: scale(0.98); transform-origin: 48px 48px; }
+    50%      { opacity: 0.95; transform: scale(1.04); transform-origin: 48px 48px; }
+  }
+  @keyframes spore-orbit {
+    0%, 100% { transform: rotate(-5deg) scale(0.96); opacity: 0.68; }
+    50%      { transform: rotate(8deg) scale(1.08); opacity: 1; }
+  }
+  @keyframes cryo-ring {
+    0%, 100% { transform: scaleX(0.82); transform-origin: 48px 60px; opacity: 0.55; }
+    50%      { transform: scaleX(1.14); transform-origin: 48px 60px; opacity: 1; }
+  }
+  @keyframes cryo-crystal-float {
+    0%, 100% { transform: translateY(2px); opacity: 0.75; }
+    50%      { transform: translateY(-3px); opacity: 1; }
+  }
+  @keyframes eruption-ring {
+    0%, 100% { r: 17px; opacity: 0.45; }
+    50%      { r: 31px; opacity: 1; }
+  }
+  @keyframes eruption-rays {
+    0%, 100% { opacity: 0.48; transform: scale(0.9); transform-origin: 48px 48px; }
+    50%      { opacity: 1; transform: scale(1.08); transform-origin: 48px 48px; }
+  }
+  @keyframes eruption-blocks {
+    0%, 100% { transform: translate(0, 0); opacity: 0.55; }
+    50%      { transform: translate(2px, -2px); opacity: 1; }
   }
 
   /* Shuffle — slow spin */
@@ -639,10 +850,12 @@
   .demo-footer {
     padding: 8px 16px 12px;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    gap: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
 
+  .btn-back,
   .btn-next,
   .btn-ok {
     display: flex;
@@ -659,17 +872,26 @@
     transition: filter 0.2s, transform 0.15s;
   }
 
+  .btn-back {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.54);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
   .btn-next {
+    margin-left: auto;
     background: var(--demo-color);
     color: #000;
   }
 
   .btn-ok {
+    margin-left: auto;
     background: transparent;
     color: var(--demo-color);
     border: 1px solid var(--demo-color);
   }
 
+  .btn-back:hover,
   .btn-next:hover,
   .btn-ok:hover {
     filter: brightness(1.15);
@@ -681,4 +903,5 @@
     transition: transform 0.2s;
   }
   .btn-next:hover .btn-arrow { transform: translateX(3px); }
+  .btn-back:hover .btn-arrow--back { transform: translateX(-3px); }
 </style>
