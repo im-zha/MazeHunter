@@ -125,15 +125,14 @@
     --silver-white: #f8fafc;
     --primary-soft: rgba(78, 222, 163, 0.14);
     --primary-line: rgba(78, 222, 163, 0.3);
-    --deep-surface: rgba(8, 22, 15, 0.86);
+    --deep-surface: rgba(14, 14, 16, 0.86);
     position: relative;
     padding: 118px 24px 104px;
     background:
-      radial-gradient(circle at 25% 12%, rgba(78, 222, 163, 0.2), transparent 34%),
-      radial-gradient(circle at 78% 22%, rgba(125, 219, 210, 0.12), transparent 32%),
-      radial-gradient(circle at 50% 78%, rgba(78, 222, 163, 0.075), transparent 34%),
-      linear-gradient(180deg, #07120d 0%, #0a1b13 24%, #07090a 76%, #07120d 100%),
-      #07090a;
+      radial-gradient(circle at 50% 18%, rgba(78, 222, 163, 0.06), transparent 34%),
+      radial-gradient(circle at 82% 42%, rgba(125, 219, 210, 0.035), transparent 30%),
+      linear-gradient(180deg, #080a0c 0%, #0b0d0f 18%, #101214 72%, #111315 100%),
+      #0b0d0f;
     border-top: 0;
     border-bottom: 0;
     color: #fff;
@@ -153,12 +152,12 @@
 
   .mission-hub::before {
     top: 0;
-    background: linear-gradient(180deg, #07120d, rgba(7, 18, 13, 0));
+    background: linear-gradient(180deg, #080a0c 0%, rgba(8, 10, 12, 0.82) 35%, rgba(8, 10, 12, 0) 100%);
   }
 
   .mission-hub::after {
     bottom: 0;
-    background: linear-gradient(180deg, rgba(7, 18, 13, 0), #07090a);
+    background: linear-gradient(180deg, rgba(17, 19, 21, 0), #111315);
   }
 
   .hub-inner {
@@ -228,7 +227,7 @@
   .action-card {
     border: 1px solid var(--primary-line);
     background:
-      linear-gradient(180deg, rgba(78, 222, 163, 0.08), rgba(125, 219, 210, 0.018)),
+      linear-gradient(180deg, rgba(78, 222, 163, 0.045), rgba(255, 255, 255, 0.014)),
       var(--deep-surface);
   }
 
@@ -282,8 +281,8 @@
     padding: 12px;
     background:
       linear-gradient(90deg, color-mix(in srgb, var(--signal-color) 14%, transparent), transparent 72%),
-      linear-gradient(180deg, rgba(78, 222, 163, 0.06), rgba(125, 219, 210, 0.018)),
-      rgba(8, 22, 15, 0.84);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
+      rgba(10, 12, 14, 0.84);
     border-left: 2px solid var(--signal-color);
   }
 
@@ -350,8 +349,8 @@
     transform: translateY(-4px);
     border-color: #6ffbbe;
     background:
-      linear-gradient(180deg, rgba(78, 222, 163, 0.14), rgba(125, 219, 210, 0.04)),
-      rgba(8, 24, 16, 0.96);
+      linear-gradient(180deg, rgba(78, 222, 163, 0.09), rgba(255, 255, 255, 0.02)),
+      rgba(13, 15, 17, 0.96);
     box-shadow:
       inset 0 0 0 1px color-mix(in srgb, var(--tone-color) 22%, transparent),
       0 0 20px rgba(78, 222, 163, 0.34),

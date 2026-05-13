@@ -81,15 +81,15 @@
     --hero-cyan: #7ddbd2;
     --silver-white: #f8fafc;
     --primary-line: rgba(78, 222, 163, 0.3);
-    --deep-surface: rgba(8, 22, 15, 0.82);
+    --deep-surface: rgba(14, 14, 16, 0.82);
     position: relative;
     padding: 118px 24px 112px;
     background:
-      radial-gradient(circle at 50% 4%, rgba(78, 222, 163, 0.18), transparent 38%),
-      radial-gradient(circle at 10% 46%, rgba(125, 219, 210, 0.1), transparent 30%),
-      radial-gradient(circle at 90% 62%, rgba(78, 222, 163, 0.08), transparent 26%),
-      linear-gradient(180deg, #07090a 0%, #0a1b13 24%, #07090a 78%, #07120d 100%),
-      #07090a;
+      radial-gradient(circle at 50% 6%, rgba(78, 222, 163, 0.055), transparent 38%),
+      radial-gradient(circle at 12% 46%, rgba(125, 219, 210, 0.035), transparent 30%),
+      radial-gradient(circle at 88% 60%, rgba(78, 222, 163, 0.035), transparent 28%),
+      linear-gradient(180deg, #111315 0%, #0d0f11 22%, #08090a 78%, #111315 100%),
+      #0d0f11;
     color: #fff;
     overflow: hidden;
   }
@@ -107,12 +107,12 @@
 
   .mechanics-section::before {
     top: 0;
-    background: linear-gradient(180deg, #07090a, rgba(7, 9, 10, 0));
+    background: linear-gradient(180deg, #111315 0%, rgba(17, 19, 21, 0.72) 42%, rgba(17, 19, 21, 0) 100%);
   }
 
   .mechanics-section::after {
     bottom: 0;
-    background: linear-gradient(180deg, rgba(7, 9, 10, 0), #07120d);
+    background: linear-gradient(180deg, rgba(17, 19, 21, 0), #111315);
   }
 
   .mechanics-inner {
@@ -170,7 +170,7 @@
     border-right: 1px solid rgba(78, 222, 163, 0.18);
     border-bottom: 1px solid rgba(78, 222, 163, 0.18);
     background:
-      linear-gradient(180deg, rgba(78, 222, 163, 0.075), rgba(125, 219, 210, 0.018)),
+      linear-gradient(180deg, rgba(78, 222, 163, 0.045), rgba(255, 255, 255, 0.014)),
       var(--deep-surface);
     overflow: hidden;
     transition: background 0.16s ease, transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
@@ -207,8 +207,8 @@
   .mechanic-card:hover {
     border-color: #6ffbbe;
     background:
-      linear-gradient(180deg, rgba(78, 222, 163, 0.14), rgba(125, 219, 210, 0.04)),
-      rgba(8, 24, 16, 0.94);
+      linear-gradient(180deg, rgba(78, 222, 163, 0.09), rgba(255, 255, 255, 0.02)),
+      rgba(13, 15, 17, 0.94);
     box-shadow:
       inset 0 0 0 1px color-mix(in srgb, var(--mechanic-color) 18%, transparent),
       0 0 20px rgba(78, 222, 163, 0.34),
