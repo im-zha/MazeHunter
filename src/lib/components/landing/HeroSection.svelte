@@ -184,9 +184,9 @@
     </div>
 
     <h2
-      class="text-7xl md:text-9xl font-display-lg font-black tracking-tighter text-white mb-4 italic select-none"
+      class="text-7xl md:text-9xl font-display-lg font-black tracking-tighter mb-4 italic select-none"
     >
-      MAZE<br /><span class="text-primary text-glow">HUNTER</span>
+      <span class="text-white">MAZE</span><br /><span class="text-primary text-glow">HUNTER</span>
     </h2>
 
     <p

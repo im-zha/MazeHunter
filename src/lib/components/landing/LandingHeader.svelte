@@ -155,9 +155,9 @@
               aria-label="Toggle Scanlines"
               aria-checked={scanlines}
               onclick={() => (scanlines = !scanlines)}
-              class="relative w-10 h-5 rounded-full transition-colors {scanlines ? 'bg-primary' : 'bg-outline-variant'}"
+              class="relative h-5 w-10 shrink-0 overflow-hidden rounded-full transition-colors {scanlines ? 'bg-primary' : 'bg-outline-variant'}"
             >
-              <span class="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform {scanlines ? 'translate-x-5' : 'translate-x-0.5'}"></span>
+              <span class="absolute left-0.5 top-0.5 size-4 rounded-full bg-white transition-transform {scanlines ? 'translate-x-5' : 'translate-x-0'}"></span>
             </button>
           </div>
         </div>
